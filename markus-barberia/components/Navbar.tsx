@@ -1,49 +1,53 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import Link from "next/link"; // Link para el Logo
-import BookingModal from "./BookingModal";
+import { useEffect, useState } from "react";
+import Link from "next/link";
 import AOS from "aos";
 import "aos/dist/aos.css";
 
-export default function Navbar() {
-  const [isModalOpen, setIsModalOpen] = useState(false);
+// 👇 ACEPTAMOS onOpenReservations y quitamos el estado isModalOpen local
+export default function Navbar({ onOpenReservations }: { onOpenReservations: () => void }) {
+  const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
     AOS.init({
       duration: 1000, 
       once: true,     
     });
+
+    // Pequeño truco UI: Detectar scroll para cambiar el fondo del Navbar
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 50);
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   return (
-    <>
-      <nav className="fixed w-full z-50 flex justify-between items-center px-8 py-4 bg-black/90 backdrop-blur-md border-b border-white/10">
-        {/*  */}
-        <Link href="/" className="font-heading text-2xl font-bold tracking-tighter text-white hover:text-amber-500 transition duration-300">
-          MARKUS
-        </Link>
+    // 👇 Navbar transparente arriba, oscuro al hacer scroll
+    <nav className={`fixed w-full z-50 flex justify-between items-center px-6 md:px-12 py-5 transition-all duration-500 ${scrolled ? 'bg-[#101010]/95 backdrop-blur-md border-b border-stone-800 py-4 shadow-lg' : 'bg-transparent border-transparent'}`}>
+      
+      {/* Logo MARKUS */}
+      <Link href="/" className="font-serif text-3xl font-bold tracking-widest text-white hover:text-[#B07D54] transition-colors duration-300">
+        MARKUS
+      </Link>
 
-        <div className="hidden md:flex gap-8 text-sm font-medium text-gray-300">
-          {/* */}
-          <a href="#" className="hover:text-amber-500 transition duration-300">INICIO</a>
-          <a href="#servicios" className="hover:text-amber-500 transition duration-300">SERVICIOS</a>
-          <a href="#crew" className="hover:text-amber-500 transition duration-300">STAFF</a>
-          <a href="/tienda" className="text-amber-500 font-bold hover:text-white transition duration-300">TIENDA</a>
-        </div>
+      {/* Menú Desktop */}
+      <div className="hidden md:flex gap-10 text-[11px] font-bold tracking-[0.2em] text-stone-300 uppercase">
+        <a href="#" className="hover:text-white transition-colors duration-300">Inicio</a>
+        <a href="#servicios" className="hover:text-white transition-colors duration-300">Servicios</a>
+        <a href="#crew" className="hover:text-white transition-colors duration-300">Staff</a>
+        <a href="/tienda" className="text-[#B07D54] hover:text-white transition-colors duration-300">Tienda</a>
+      </div>
 
-        <button 
-          onClick={() => setIsModalOpen(true)}
-          className="bg-amber-600 hover:bg-amber-700 text-white px-6 py-2 rounded-full font-semibold transition text-sm shadow-lg shadow-amber-600/20"
-        >
-          Reservar
-        </button>
-      </nav>
-
-      <BookingModal 
-        isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
-      />
-    </>
+      {/* 👇 Botón de Reserva conectado al Modal Global */}
+      <button 
+        onClick={onOpenReservations}
+        className="bg-transparent border border-[#B07D54] text-[#B07D54] hover:bg-[#B07D54] hover:text-[#161616] px-8 py-2.5 rounded-full font-bold transition-colors duration-300 text-xs tracking-widest uppercase"
+      >
+        Reservar
+      </button>
+      
+    </nav>
   );
 }

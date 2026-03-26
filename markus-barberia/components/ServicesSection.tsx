@@ -1,16 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import BookingModal from "./BookingModal"; // 1. Importamos el Modal
+import Image from "next/image";
 
+// Categorías con imágenes dinámicas
 const categories = [
-  { id: "servicios", label: "Servicios" },
-  { id: "combos", label: "Combos" },
-  { id: "color", label: "Colorimetría" },
-  { id: "permanentes", label: "Permanentes" },
-  { id: "extras", label: "Extras" },
+  { id: "servicios", label: "Servicios", image: "/navaja.png" },
+  { id: "combos", label: "Combos", image: "/combos.png" },
+  { id: "color", label: "Colorimetría", image: "/colorimetria.png" },
+  { id: "permanentes", label: "Permanentes", image: "/textura.png" },
+  { id: "extras", label: "Extras", image: "/extras.png" },
 ];
 
+// Datos de servicios
 const servicesData: Record<string, Array<{ title: string; price: string; time: string; desc: string }>> = {
   servicios: [
     { title: "Corte Básico", price: "S/ 35.00", time: "1h", desc: "Corte clásico con tijera o máquina." },
@@ -38,85 +40,78 @@ const servicesData: Record<string, Array<{ title: string; price: string; time: s
   ]
 };
 
-export default function ServicesSection() {
+// 👇 ACEPTAMOS onOpenReservations COMO PROP
+export default function ServicesSection({ onOpenReservations }: { onOpenReservations: () => void }) {
   const [activeTab, setActiveTab] = useState("servicios");
-  const [isModalOpen, setIsModalOpen] = useState(false); // 2. Estado para abrir/cerrar
+
+  const activeCategory = categories.find(cat => cat.id === activeTab);
+  const currentImage = activeCategory?.image || "/navaja.png";
 
   return (
-    <section id="servicios" className="py-24 bg-neutral-900 px-4 md:px-8">
-      <div className="max-w-6xl mx-auto">
+    <section id="servicios" className="py-24 bg-[#FDFBF7] px-4 md:px-8">
+      
+      <div className="max-w-7xl mx-auto bg-[#161616] rounded-[2rem] p-8 md:p-12 lg:p-16 flex flex-col lg:flex-row gap-12 lg:gap-20 shadow-2xl overflow-hidden relative">
         
-        {/* Título */}
-        <div className="text-center mb-12" data-aos="fade-up">
-          <h2 className="font-heading text-4xl md:text-5xl font-bold text-white mb-4 uppercase">
+        <div className="flex-1 flex flex-col">
+          <h2 className="font-serif text-4xl md:text-6xl text-white mb-8" data-aos="fade-up">
             Nuestros Servicios
           </h2>
-          <div className="w-24 h-1 bg-amber-600 mx-auto rounded-full"></div>
-        </div>
 
-        {/* Pestañas */}
-        <div 
-          className="flex flex-wrap justify-center gap-4 mb-12 overflow-x-auto pb-4"
-          data-aos="fade-up"
-          data-aos-delay="200"
-        >
-          {categories.map((cat) => (
-            <button
-              key={cat.id}
-              onClick={() => setActiveTab(cat.id)}
-              className={`px-6 py-2 rounded-full font-bold text-sm tracking-wide transition-all duration-300 border ${
-                activeTab === cat.id
-                  ? "bg-amber-600 border-amber-600 text-white shadow-lg shadow-amber-900/50 scale-105"
-                  : "bg-transparent border-white/20 text-gray-400 hover:border-amber-500 hover:text-white"
-              }`}
-            >
-              {cat.label}
-            </button>
-          ))}
-        </div>
+          <div className="flex flex-wrap items-center gap-3 text-[10px] md:text-xs tracking-[0.2em] uppercase mb-8 text-stone-500 border-b border-stone-800 pb-6" data-aos="fade-up" data-aos-delay="100">
+            {categories.map((cat, index) => (
+              <div key={cat.id} className="flex items-center gap-3">
+                <button 
+                  onClick={() => setActiveTab(cat.id)} 
+                  className={`transition-colors duration-300 hover:text-white ${activeTab === cat.id ? 'text-[#B07D54] font-bold' : ''}`}
+                >
+                  {cat.label}
+                </button>
+                {index < categories.length - 1 && <span className="text-stone-700">|</span>}
+              </div>
+            ))}
+          </div>
 
-        {/* Grid de Tarjetas */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {servicesData[activeTab]?.map((service, index) => (
-            <div 
-              key={index}
-              data-aos="zoom-in" 
-              data-aos-delay={index * 100}
-              className="bg-black border border-white/10 p-6 rounded-2xl hover:border-amber-500/50 transition duration-300 group hover:-translate-y-1 hover:shadow-2xl hover:shadow-amber-900/10 flex flex-col justify-between"
-            >
-              <div>
-                <div className="flex justify-between items-start mb-2">
-                  <h3 className="font-heading text-xl font-bold text-white">{service.title}</h3>
-                  <span className="text-xs font-bold bg-neutral-800 text-gray-300 px-2 py-1 rounded border border-white/10">
-                    {service.time}
+          <div className="flex flex-col">
+            {servicesData[activeTab]?.map((service, index) => (
+              <div 
+                key={index} 
+                // 👇 REEMPLAZAMOS EL onClick VIEJO POR ESTE
+                onClick={onOpenReservations} 
+                className="group flex flex-col md:flex-row md:items-center justify-between py-6 border-b border-stone-800 cursor-pointer hover:border-stone-500 transition-colors" 
+                data-aos="fade-up" 
+                data-aos-delay={index * 100}
+              >
+                <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-8 flex-1">
+                  <h3 className="font-serif text-xl md:text-2xl text-white uppercase group-hover:text-[#B07D54] transition-colors md:w-1/2">
+                    {service.title}
+                  </h3>
+                  <div className="flex flex-col text-[9px] md:text-[10px] text-stone-400 uppercase tracking-widest md:w-1/2">
+                    <span className="text-stone-300 font-semibold mb-1">{service.time} | DETALLES</span>
+                    <span className="leading-relaxed">{service.desc}</span>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-3 mt-4 md:mt-0">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#B07D54]"></span>
+                  <span className="text-xl md:text-3xl font-serif text-white group-hover:text-[#B07D54] transition-colors">
+                    {service.price}
                   </span>
                 </div>
-                <p className="text-gray-400 text-sm leading-relaxed mb-6">
-                  {service.desc}
-                </p>
               </div>
-              
-              <div className="flex justify-between items-center border-t border-white/10 pt-4 mt-auto">
-                <span className="text-2xl font-bold text-amber-500">{service.price}</span>
-                
-                {/* 3. CONECTAMOS EL BOTÓN AL MODAL */}
-                <button 
-                  onClick={() => setIsModalOpen(true)} 
-                  className="text-sm font-semibold text-white hover:text-amber-500 transition flex items-center gap-1 group-hover:gap-2"
-                >
-                  Reservar <span>→</span>
-                </button>
-              
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
+        </div>
+
+        <div key={activeTab} className="hidden lg:block w-[35%] relative rounded-2xl overflow-hidden" data-aos="fade-left" data-aos-delay="300">
+          <Image 
+            src={currentImage} 
+            alt={`Detalle de servicio ${activeTab} en Markus`} 
+            fill 
+            className="object-cover grayscale hover:grayscale-0 transition-all duration-700 cursor-pointer" 
+          />
         </div>
 
       </div>
-
-      {/* 4. El Modal al final  */}
-      <BookingModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
-      
     </section>
   );
 }

@@ -1,76 +1,86 @@
+"use client";
+import { useState, useEffect } from "react";
 import Navbar from "../components/Navbar"; 
 import Footer from "../components/Footer";
 import ServicesSection from "../components/ServicesSection";
-import Hero from "../components/Hero"; // <--- AQUÍ IMPORTAMOS TU NUEVO COMPONENTE
+import Hero from "../components/Hero"; 
 import GoogleReviews from "../components/GoogleReviews";
 import Gallery from "@/components/Gallery";
+import CrewSection from "../components/CrewSection";
+import BookingModal from "../components/BookingModal";
+import { supabase } from "../lib/supabase"; // 👇 IMPORTAMOS SUPABASE AQUÍ
+
+// Definimos la estructura de la pre-selección para Typescript
+interface PreSelection {
+  sede?: any;
+  barbero?: any;
+}
 
 export default function Home() {
+  // 👇 1. AJUSTE: Estado "inteligente" para el Modal
+  // Ahora es un objeto que controla la visibilidad y los datos pre-seleccionados.
+  const [bookingModalState, setBookingModalState] = useState<{
+    isOpen: boolean;
+    preSelection?: PreSelection;
+  }>({
+    isOpen: false,
+    preSelection: undefined
+  });
+
+  // 👇 2. AJUSTE: Cargamos las sedes en la página principal
+  // Esto es vital para poder "mapear" el texto "Pueblo Libre" de la sección Crew
+  // con el objeto Sede real que viene de Supabase.
+  const [sedesDB, setSedesDB] = useState<any[]>([]);
+  const [isLoadingSedes, setIsLoadingSedes] = useState(true);
+
+  useEffect(() => {
+    const fetchSedes = async () => {
+      setIsLoadingSedes(true);
+      const { data, error } = await supabase.from('sedes').select('*');
+      if (data) setSedesDB(data);
+      setIsLoadingSedes(false);
+    };
+    fetchSedes();
+  }, []);
+
+  // Funciones para abrir y cerrar el modal con facilidad
+  const openBookingModal = (data?: PreSelection) => {
+    setBookingModalState({ isOpen: true, preSelection: data });
+  };
+
+  const closeBookingModal = () => {
+    setBookingModalState({ isOpen: false, preSelection: undefined });
+  };
+
   return (
-    <main className="min-h-screen bg-black text-white">
+    <main className="min-h-screen bg-[#FDFBF7] text-stone-900 font-sans selection:bg-[#B07D54] selection:text-white relative">
       
-      {/* 1. Navbar */}
-      <Navbar />
+      {/*👇 Pasamos la función de abrir reservas al Navbar */}
+      <Navbar onOpenReservations={openBookingModal} />
 
-      <Hero />
+      {/*👇 Pasamos la función de abrir reservas al Hero */}
+      <Hero onOpenReservations={openBookingModal} />
 
-      {/* 3. Servicios */}
-      <ServicesSection />
-
-      {/* 4. Staff  */}
-      <section id="crew" className="py-24 bg-black px-8 border-t border-white/10">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-16" data-aos="fade-up">
-            <h2 className="font-heading text-3xl md:text-4xl font-bold text-white mb-4 uppercase">
-              Team Markus
-            </h2>
-            <p className="text-gray-400 max-w-2xl mx-auto">
-              No es solo un corte, es quién te lo hace. Conoce a los expertos detrás de la silla.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            {[
-              { name: "Marcos", role: "Master Barber", img: "/Marcos.jpg" },
-              { name: "Sebastián", role: "Fade Specialist", img: "https://images.unsplash.com/photo-1599351431202-1e0f0137899a?q=80&w=1976&auto=format&fit=crop" },
-              { name: "Yeampier", role: "Urban Style", img: "https://images.unsplash.com/photo-1605497788044-5a32c7078486?q=80&w=1974&auto=format&fit=crop" },
-              { name: "Jesús", role: "Classic Cuts", img: "https://images.unsplash.com/photo-1512864084360-7c0c4d0a0845?q=80&w=2070&auto=format&fit=crop" }
-            ].map((barber, index) => (
-              <div 
-                key={index} 
-                className="group relative overflow-hidden rounded-xl cursor-pointer"
-                data-aos="fade-up"
-                data-aos-delay={index * 150}
-              >
-                <div className="aspect-[3/4] bg-neutral-800 relative">
-                    <img 
-                      src={barber.img} 
-                      alt={barber.name}
-                      className="object-cover w-full h-full opacity-80 group-hover:opacity-100 transition duration-500 group-hover:scale-110"
-                    />
-                </div>
-                <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-black via-black/80 to-transparent p-4 translate-y-2 group-hover:translate-y-0 transition duration-300">
-                  <h3 className="text-white font-bold text-lg font-heading">{barber.name}</h3>
-                  <p className="text-amber-500 text-xs font-bold uppercase">{barber.role}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+      {/*👇 Pasamos la función de abrir reservas a Servicios */}
+      <ServicesSection onOpenReservations={openBookingModal} />
+      
+      {/*👇 IMPORTANTE: Pasamos las sedes y la función de abrir a CrewSection */}
+      <CrewSection 
+        sedesDB={sedesDB} 
+        isLoadingSedes={isLoadingSedes} 
+        onOpenReservations={openBookingModal} 
+      /> 
+      
       <Gallery />
-      
       <GoogleReviews />
-
-      {/* 5. Footer */}
       <Footer />
 
-      {/* 6. Botón WhatsApp Flotante */}
+      {/*👇 Botón WhatsApp Flotante */}
       <a 
         href="https://wa.me/51917876813?text=Hola%20Markus%2C%20quisiera%20reservar%20una%20cita."
         target="_blank"
         rel="noopener noreferrer"
-        className="fixed bottom-8 right-8 z-40 bg-green-600 hover:bg-green-500 text-white p-4 rounded-full shadow-lg shadow-green-900/20 transition transform hover:scale-110 flex items-center justify-center animate-bounce"
+        className="fixed bottom-8 right-8 z-40 bg-[#25D366] hover:bg-[#1EBE5D] text-white p-4 rounded-full shadow-lg shadow-stone-900/50 transition transform hover:scale-110 flex items-center justify-center animate-bounce"
         aria-label="Contactar por WhatsApp"
       >
         <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
@@ -78,6 +88,13 @@ export default function Home() {
         </svg>
       </a>
 
+      {/*👇 3. AJUSTE: El Modal inteligente al final */}
+      <BookingModal 
+        isOpen={bookingModalState.isOpen} 
+        preSelection={bookingModalState.preSelection} 
+        onClose={closeBookingModal} 
+      />
+      
     </main>
   );
 }
