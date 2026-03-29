@@ -155,7 +155,7 @@ export default function BookingModal({ isOpen, preSelection, onClose }: {
         }).filter(Boolean) as { inicio: number, fin: number }[];
 
         const APERTURA = 10 * 60; 
-        const CIERRE = 20 * 60;   
+        const CIERRE = 21.5 * 60;   
         const INTERVALO = 30;     
         const duracionRequerida = totalMinutos > 0 ? totalMinutos : 30;
 
