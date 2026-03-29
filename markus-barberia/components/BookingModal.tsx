@@ -3,13 +3,16 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../lib/supabase"; 
 
-// 👇 AQUÍ AGREGAMOS LA INTERFAZ PARA ACEPTAR LOS DATOS DE PRE-SELECCIÓN
 interface PreSelection {
   sede?: any;
   barbero?: any;
 }
 
-// 👇 AQUÍ ACTUALIZAMOS PARA QUE ACEPTE "preSelection" DESDE PAGE.TSX
+interface SlotHorario {
+  horaTexto: string;
+  disponible: boolean;
+}
+
 export default function BookingModal({ isOpen, preSelection, onClose }: { 
   isOpen: boolean; 
   preSelection?: PreSelection; 
@@ -17,12 +20,14 @@ export default function BookingModal({ isOpen, preSelection, onClose }: {
 }) {
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const [sedesDB, setSedesDB] = useState<any[]>([]);
   const [barberosDB, setBarberosDB] = useState<any[]>([]);
   const [serviciosDB, setServiciosDB] = useState<any[]>([]);
   const [isLoadingData, setIsLoadingData] = useState(true);
-  const [horasOcupadas, setHorasOcupadas] = useState<string[]>([]);
+  
+  const [slotsDelDia, setSlotsDelDia] = useState<SlotHorario[]>([]);
   
   const [selection, setSelection] = useState({
     sede: null as any,
@@ -40,7 +45,7 @@ export default function BookingModal({ isOpen, preSelection, onClose }: {
   const [currentDate, setCurrentDate] = useState(new Date());
 
   const today = new Date();
-  today.setHours(0, 0, 0, 0); // Reseteamos la hora para comparar solo el día
+  today.setHours(0, 0, 0, 0); 
 
   const handlePrevMonth = () => {
     setCurrentDate(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
@@ -72,6 +77,15 @@ export default function BookingModal({ isOpen, preSelection, onClose }: {
     return `${dias[date.getDay()]} ${day} de ${meses[date.getMonth()]}`;
   };
 
+  const minutosAHoraTexto = (minutosTotal: number): string => {
+    const horas = Math.floor(minutosTotal / 60);
+    const minutos = minutosTotal % 60;
+    const ampm = horas >= 12 ? 'PM' : 'AM';
+    const horas12 = horas % 12 || 12;
+    const minutosStr = String(minutos).padStart(2, '0');
+    return `${horas12}:${minutosStr} ${ampm}`;
+  };
+
   useEffect(() => {
     const loadData = async () => {
       setIsLoadingData(true);
@@ -92,61 +106,85 @@ export default function BookingModal({ isOpen, preSelection, onClose }: {
     } else {
       setStep(1);
       setSelection({ sede: null, barbero: null, servicios: [], fecha: "", hora: "", nombre: "", apellido: "", celular: "", correo: "", aceptaPromociones: false });
+      setErrorMessage(null); // Limpiamos el error al cerrar
     }
   }, [isOpen]);
 
-  // 👇 LÓGICA QUE SALTA PASOS SI VIENES DE LA SECCIÓN DE TEAM
   useEffect(() => {
     if (isOpen && !isLoadingData && preSelection) {
       if (preSelection.sede && preSelection.barbero) {
-        setSelection(prev => ({ ...prev, sede: preSelection.sede, barbero: preSelection.barbero }));
+        const barberoCompleto = barberosDB.find(b => b.nombre === preSelection.barbero.nombre) || preSelection.barbero;
+        setSelection(prev => ({ ...prev, sede: preSelection.sede, barbero: barberoCompleto }));
         setStep(3);
       } else if (preSelection.sede) {
         setSelection(prev => ({ ...prev, sede: preSelection.sede }));
         setStep(2);
       }
     }
-  }, [isOpen, isLoadingData, preSelection]);
+  }, [isOpen, isLoadingData, preSelection, barberosDB]);
 
   useEffect(() => {
     const cargarHorasOcupadas = async () => {
       if (!selection.barbero || !selection.fecha) {
-        setHorasOcupadas([]);
+        setSlotsDelDia([]);
         return;
       }
 
+      const cacheBuster = `bypass-${Date.now()}`;
+
       const { data, error } = await supabase
         .from('citas')
-        .select('fecha_hora')
-        .eq('barbero_id', selection.barbero.id);
+        .select('fecha_hora, duracion_total_minutos')
+        .eq('barbero_id', selection.barbero.id)
+        .neq('cliente_nombre', cacheBuster);
 
       if (data) {
-        const ocupadas = data.map(cita => {
-          const dateStr = cita.fecha_hora.split('T')[0]; 
+        const rangosOcupados = data.map(cita => {
+          const dateObj = new Date(cita.fecha_hora);
+          const localYear = dateObj.getFullYear();
+          const localMonth = String(dateObj.getMonth() + 1).padStart(2, '0');
+          const localDay = String(dateObj.getDate()).padStart(2, '0');
+          const localDateStr = `${localYear}-${localMonth}-${localDay}`;
           
-          if (dateStr === selection.fecha) {
-            const dateObj = new Date(cita.fecha_hora);
-            let hours = dateObj.getUTCHours() - 5; 
-            if (hours < 0) hours += 24;
-            
-            const ampm = hours >= 12 ? 'PM' : 'AM';
-            hours = hours % 12;
-            hours = hours ? hours : 12;
-            return `${hours}:00 ${ampm}`;
+          if (localDateStr === selection.fecha) {
+            const inicioMin = dateObj.getHours() * 60 + dateObj.getMinutes();
+            const finMin = inicioMin + (cita.duracion_total_minutos || 30);
+            return { inicio: inicioMin, fin: finMin };
           }
           return null;
-        }).filter(Boolean);
+        }).filter(Boolean) as { inicio: number, fin: number }[];
 
-        setHorasOcupadas(ocupadas as string[]);
+        const APERTURA = 10 * 60; 
+        const CIERRE = 20 * 60;   
+        const INTERVALO = 30;     
+        const duracionRequerida = totalMinutos > 0 ? totalMinutos : 30;
+
+        const nuevosSlots: SlotHorario[] = [];
+
+        for (let t = APERTURA; t < CIERRE; t += INTERVALO) {
+          const tiempoFinEstimado = t + duracionRequerida;
+
+          if (tiempoFinEstimado > CIERRE) {
+            nuevosSlots.push({ horaTexto: minutosAHoraTexto(t), disponible: false });
+            continue;
+          }
+
+          const choca = rangosOcupados.some(rango => {
+            return (t < rango.fin) && (tiempoFinEstimado > rango.inicio);
+          });
+
+          nuevosSlots.push({ horaTexto: minutosAHoraTexto(t), disponible: !choca });
+        }
+
+        setSlotsDelDia(nuevosSlots);
       }
     };
 
     cargarHorasOcupadas();
-  }, [selection.barbero, selection.fecha]);
+  }, [selection.barbero, selection.fecha, totalMinutos]);
 
   if (!isOpen) return null;
 
-  const horarios = ["10:00 AM", "11:00 AM", "12:00 PM", "1:00 PM", "3:00 PM", "4:00 PM", "5:00 PM", "6:00 PM", "7:00 PM", "8:00 PM"];
   const stepsList = ["Ubicación", "Especialista", "Servicio", "Horario", "Confirmar"];
 
   const barberosFiltrados = selection.sede 
@@ -186,7 +224,44 @@ export default function BookingModal({ isOpen, preSelection, onClose }: {
       let hours = parseInt(timeMatch![1]);
       if (timeMatch![3] === 'PM' && hours !== 12) hours += 12;
       if (timeMatch![3] === 'AM' && hours === 12) hours = 0;
-      const isoDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), hours, parseInt(timeMatch![2])).toISOString();
+      const mins = parseInt(timeMatch![2]);
+      
+      const isoDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), hours, mins).toISOString();
+
+      const inicioMinNuevo = hours * 60 + mins;
+      const finMinNuevo = inicioMinNuevo + (totalMinutos > 0 ? totalMinutos : 30);
+      const cacheBuster = `bypass-${Date.now()}`;
+
+      const { data: citasExistentes } = await supabase
+        .from('citas')
+        .select('fecha_hora, duracion_total_minutos')
+        .eq('barbero_id', selection.barbero.id)
+        .neq('cliente_nombre', cacheBuster);
+
+      if (citasExistentes) {
+        const hayChoque = citasExistentes.some(cita => {
+          const citaDate = new Date(cita.fecha_hora);
+          const localYear = citaDate.getFullYear();
+          const localMonth = String(citaDate.getMonth() + 1).padStart(2, '0');
+          const localDay = String(citaDate.getDate()).padStart(2, '0');
+          const localDateStr = `${localYear}-${localMonth}-${localDay}`;
+          
+          if (localDateStr === selection.fecha) {
+            const inicioMinCita = citaDate.getHours() * 60 + citaDate.getMinutes();
+            const finMinCita = inicioMinCita + (cita.duracion_total_minutos || 30);
+            
+            return (inicioMinNuevo < finMinCita) && (finMinNuevo > inicioMinCita);
+          }
+          return false;
+        });
+
+        if (hayChoque) {
+          setErrorMessage("¡Ups! Alguien más acaba de reservar este horario hace unos segundos. Por favor, elige otro horario disponible.");
+          setStep(4);
+          setIsSubmitting(false);
+          return;
+        }
+      }
 
       const { data: nuevaCita, error: errorCita } = await supabase
         .from('citas')
@@ -198,7 +273,8 @@ export default function BookingModal({ isOpen, preSelection, onClose }: {
           cliente_apellido: selection.apellido,
           cliente_celular: selection.celular,
           cliente_correo: selection.correo,
-          acepta_promociones: selection.aceptaPromociones
+          acepta_promociones: selection.aceptaPromociones,
+          duracion_total_minutos: totalMinutos
         })
         .select()
         .single();
@@ -220,28 +296,34 @@ export default function BookingModal({ isOpen, preSelection, onClose }: {
 
     } catch (error) {
       console.error("Error al guardar:", error);
-      alert("Hubo un problema al procesar tu reserva. Inténtalo de nuevo.");
+      setErrorMessage("Hubo un problema al procesar tu reserva. Inténtalo de nuevo.");
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // 👇 AQUÍ ESTÁ EL DICCIONARIO DE WHATSAPP ACTUALIZADO
   const sendToWhatsApp = () => {
     const serviciosNombres = selection.servicios.map(s => s.nombre).join(', ');
     const total = selection.servicios.reduce((sum, s) => sum + Number(s.precio), 0);
-    const text = `Hola Markus, mi reserva está confirmada en la web:%0A👤 Nombre: ${selection.nombre} ${selection.apellido}%0A📍 Sede: ${selection.sede.nombre}%0A✂️ Barbero: ${selection.barbero.nombre}%0A💈 Servicios: ${serviciosNombres} (Total: S/${total})%0A📅 Fecha: ${selection.fecha} a las ${selection.hora}`;
-    
-    // Diccionario de teléfonos. ¡CÁMBIALOS POR LOS REALES!
+
+    const mensajeLimpio = `¡Hola Markus! Mi reserva está confirmada en la web. Aquí están mis datos:\n\n` +
+    `• *Nombre:* ${selection.nombre} ${selection.apellido}\n` +
+    `• *Sede:* ${selection.sede.nombre}\n` +
+    `• *Barbero:* ${selection.barbero.nombre}\n` +
+    `• *Servicios:* ${serviciosNombres}\n` +
+    `• *Total a pagar:* S/ ${total.toFixed(2)}\n` +
+    `• *Fecha:* ${selection.fecha} a las ${selection.hora}`;
+
+    const textoCodificado = encodeURIComponent(mensajeLimpio);
+
     const telefonosSedes: Record<string, string> = {
       "Pueblo Libre": "51917876813",       
       "Cercado de Lima": "51960378805",
       "Magdalena del Mar": "51923469044"    
     };
 
-    const numeroWhatsApp = telefonosSedes[selection.sede.nombre] || "51917876813";
-
-    window.open(`https://wa.me/${numeroWhatsApp}?text=${text}`, '_blank');
+    const numeroSede = telefonosSedes[selection.sede.nombre] || "51917876813";
+    window.open(`https://api.whatsapp.com/send?phone=${numeroSede}&text=${textoCodificado}`, '_blank');
   };
 
   const progressPercentage = ((step - 1) / (stepsList.length - 1)) * 100;
@@ -252,6 +334,28 @@ export default function BookingModal({ isOpen, preSelection, onClose }: {
 
       <div className={`relative flex flex-col w-full transition-all duration-500 ease-in-out rounded-2xl shadow-2xl overflow-hidden bg-[#161616] border border-stone-800 ${step === 6 ? 'max-w-md h-auto' : 'max-w-4xl h-[700px] max-h-[90vh]'}`}>
         
+        {/* 👇 MODAL DE ERROR PERSONALIZADO 👇 */}
+        {errorMessage && (
+          <div className="absolute inset-0 z-[200] flex items-center justify-center bg-[#101010]/80 backdrop-blur-sm p-4 animate-fade-in">
+            <div className="bg-[#161616] border border-stone-800 p-8 rounded-3xl shadow-2xl max-w-sm w-full text-center flex flex-col items-center">
+              <div className="w-16 h-16 rounded-full bg-red-500/10 text-red-500 flex items-center justify-center mb-6 shadow-[0_0_30px_rgba(239,68,68,0.2)]">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+              </div>
+              <h3 className="font-serif text-2xl text-white mb-2 tracking-wide">¡Lo sentimos!</h3>
+              <p className="text-stone-400 text-sm font-light leading-relaxed mb-8 px-2">
+                {errorMessage}
+              </p>
+              <button 
+                onClick={() => setErrorMessage(null)} 
+                className="w-full py-4 rounded-full border border-stone-700 text-white font-bold text-xs uppercase tracking-widest hover:bg-white hover:text-black transition-colors"
+              >
+                Entendido
+              </button>
+            </div>
+          </div>
+        )}
+        {/* 👆 FIN DEL BLOQUE DE ERROR 👆 */}
+
         {/* CABECERA */}
         {step < 6 && (
           <div className="w-full bg-[#101010] p-6 border-b border-stone-800 flex flex-col gap-4 relative shrink-0">
@@ -283,7 +387,7 @@ export default function BookingModal({ isOpen, preSelection, onClose }: {
 
         <div className="flex-1 flex flex-col overflow-hidden relative">
           
-          <div className={`flex-1 overflow-y-auto p-6 md:p-10 custom-scrollbar ${step === 6 ? 'flex items-center justify-center py-16' : ''}`}>
+          <div className={`flex-1 overflow-y-auto overscroll-contain p-6 md:p-10 custom-scrollbar ${step === 6 ? 'flex items-center justify-center py-16' : ''}`}>
             {isLoadingData ? (
               <div className="flex-1 flex items-center justify-center h-full">
                 <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#B07D54]"></div>
@@ -292,7 +396,7 @@ export default function BookingModal({ isOpen, preSelection, onClose }: {
               <div className="max-w-2xl mx-auto w-full flex flex-col">
                 
                 {step === 1 && (
-                  <div className="animate-fade-in">
+                  <div className="animate-fade-in pb-8">
                     <h2 className="text-3xl font-serif text-white mb-2">Selecciona tu Sede</h2>
                     <p className="text-stone-500 mb-8 font-light text-sm">Elige dónde quieres vivir la experiencia Markus.</p>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -312,7 +416,7 @@ export default function BookingModal({ isOpen, preSelection, onClose }: {
                 )}
 
                 {step === 2 && (
-                  <div className="animate-fade-in">
+                  <div className="animate-fade-in pb-8">
                     <h2 className="text-3xl font-serif text-white mb-2">Tu Especialista</h2>
                     <p className="text-stone-500 mb-8 font-light text-sm">Maestros disponibles en {selection.sede?.nombre}.</p>
                     {barberosFiltrados.length === 0 ? (
@@ -347,10 +451,10 @@ export default function BookingModal({ isOpen, preSelection, onClose }: {
                 )}
 
                 {step === 3 && (
-                  <div className="animate-fade-in">
+                  <div className="animate-fade-in pb-8">
                     <h2 className="text-3xl font-serif text-white mb-2">Servicios</h2>
                     <p className="text-stone-500 mb-6 font-light text-sm">Diseña tu experiencia seleccionando los servicios.</p>
-                    <div className="space-y-3 pb-4 flex-1 overflow-y-auto pr-2 custom-scrollbar">
+                    <div className="space-y-3">
                       {serviciosDB.map((servicio) => {
                         const isSelected = selection.servicios.some(s => s.id === servicio.id);
                         return (
@@ -382,12 +486,11 @@ export default function BookingModal({ isOpen, preSelection, onClose }: {
                 )}
 
                 {step === 4 && (
-                  <div className="animate-fade-in h-full flex flex-col">
+                  <div className="animate-fade-in pb-8">
                     <h2 className="text-3xl font-serif text-white mb-6">Agenda tu Cita</h2>
-                    <div className="flex flex-col md:flex-row gap-8 h-full">
-                      <div className="flex-1 bg-[#1A1A1A] p-6 rounded-2xl border border-stone-800">
+                    <div className="flex flex-col md:flex-row gap-8 items-start">
+                      <div className="flex-1 w-full bg-[#1A1A1A] p-6 rounded-2xl border border-stone-800">
                         
-                        {/* Cabecera del mes con botones */}
                         <div className="flex items-center justify-between mb-6 border-b border-stone-800 pb-4">
                           <button 
                             type="button" 
@@ -444,36 +547,41 @@ export default function BookingModal({ isOpen, preSelection, onClose }: {
                           })}
                         </div>
                       </div>
-                      <div className="flex-1 flex flex-col">
+                      
+                      <div className="flex-1 w-full flex flex-col">
                          <div className="mb-4">
                            <div className="text-[10px] text-stone-500 uppercase tracking-widest">Disponibilidad</div>
                            {totalMinutos > 0 && (
                              <div className="text-xs text-[#B07D54] mt-1">
-                               Duración total: {formatDuracion(totalMinutos)}
+                               Duración calculada: {formatDuracion(totalMinutos > 0 ? totalMinutos : 30)}
                              </div>
                            )}
                          </div>
-                         <div className="grid grid-cols-2 gap-3 overflow-y-auto pr-2 custom-scrollbar pb-4">
-                           {horarios.map((hora) => {
-                              const estaOcupada = horasOcupadas.includes(hora);
-                              const isSelected = selection.hora === hora;
+                         
+                         <div className="grid grid-cols-2 gap-3">
+                           {slotsDelDia.length > 0 ? slotsDelDia.map((slot) => {
+                              const isSelected = selection.hora === slot.horaTexto;
                               return (
                                 <button 
                                   type="button"
-                                  key={hora} 
-                                  onClick={() => !estaOcupada && setSelection({ ...selection, hora })}
-                                  disabled={estaOcupada}
+                                  key={slot.horaTexto} 
+                                  onClick={() => slot.disponible && setSelection({ ...selection, hora: slot.horaTexto })}
+                                  disabled={!slot.disponible}
                                   className={`py-3 px-4 rounded-xl text-sm border font-medium transition-all tracking-wider
-                                  ${estaOcupada 
+                                  ${!slot.disponible 
                                      ? 'bg-stone-900/50 text-stone-700 border-transparent cursor-not-allowed line-through' 
                                      : isSelected 
                                        ? 'border-[#B07D54] bg-[#B07D54]/20 text-[#B07D54] shadow-md' 
                                        : 'border-stone-800 text-stone-300 hover:border-[#B07D54] hover:text-[#B07D54] bg-[#1A1A1A]'}`}
                                 >
-                                  {hora}
+                                  {slot.horaTexto}
                                 </button>
                               );
-                           })}
+                           }) : (
+                             <div className="col-span-2 text-stone-500 text-sm text-center mt-10">
+                               Selecciona una fecha para ver horarios disponibles.
+                             </div>
+                           )}
                          </div>
                       </div>
                     </div>
@@ -481,10 +589,9 @@ export default function BookingModal({ isOpen, preSelection, onClose }: {
                 )}
 
                 {step === 5 && (
-                  <div className="animate-fade-in flex flex-col h-full">
-                    <div className="flex flex-col md:flex-row gap-8 h-full pb-4">
+                  <div className="animate-fade-in pb-8">
+                    <div className="flex flex-col md:flex-row gap-8">
                       
-                      {/* Lado Izquierdo: Formulario de Datos */}
                       <div className="flex-1">
                         <h2 className="text-3xl font-serif text-white mb-2">Tus Datos</h2>
                         <p className="text-stone-500 mb-6 font-light text-sm">Para finalizar, ingresa tu información.</p>
@@ -517,7 +624,6 @@ export default function BookingModal({ isOpen, preSelection, onClose }: {
                         </div>
                       </div>
 
-                      {/* Lado Derecho: Tarjetón de Resumen Fijo */}
                       <div className="w-full md:w-[280px] shrink-0">
                         <div className="bg-[#1A1A1A] p-6 rounded-2xl border border-stone-800 sticky top-0">
                           <h4 className="font-serif text-[#B07D54] text-lg mb-4 border-b border-stone-800 pb-2">Resumen</h4>
@@ -559,7 +665,6 @@ export default function BookingModal({ isOpen, preSelection, onClose }: {
                   </div>
                 )}
 
-                {/* 👇 ESTA ES LA ACTUALIZACIÓN DEL TEXTO FINAL */}
                 {step === 6 && (
                   <div className="animate-fade-in text-center flex flex-col items-center justify-center w-full">
                     <div className="w-24 h-24 bg-transparent border-2 border-[#B07D54] text-[#B07D54] rounded-full flex items-center justify-center mb-8 shadow-[0_0_30px_rgba(176,125,84,0.2)]">
