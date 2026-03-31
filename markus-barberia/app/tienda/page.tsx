@@ -1,3 +1,4 @@
+// Forzando actualizacion para Vercel
 import Navbar from "../../components/Navbar"; 
 import Footer from "../../components/Footer";
 import Preloader from "@/components/Preloader";
