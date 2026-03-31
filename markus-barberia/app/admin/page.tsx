@@ -1,5 +1,5 @@
 "use client";
-
+// Esto es un cambio real
 import { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabase"; 
 import Sidebar from "../../components/admin/Sidebar";
