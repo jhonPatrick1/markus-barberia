@@ -6,7 +6,7 @@ import AOS from "aos";
 import "aos/dist/aos.css";
 
 // 👇 ACEPTAMOS onOpenReservations y quitamos el estado isModalOpen local
-export default function Navbar({ onOpenReservations }: { onOpenReservations: () => void }) {
+export default function Navbar({ onOpenReservations }: { onOpenReservations?: () => void }) {
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
