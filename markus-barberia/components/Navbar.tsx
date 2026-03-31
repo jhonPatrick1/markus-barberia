@@ -5,7 +5,7 @@ import Link from "next/link";
 import AOS from "aos";
 import "aos/dist/aos.css";
 
-// 👇 ACEPTAMOS onOpenReservations y quitamos el estado isModalOpen local
+// 👇 ACEPTAMOS onOpenReservations como OPCIONAL (?)
 export default function Navbar({ onOpenReservations }: { onOpenReservations?: () => void }) {
   const [scrolled, setScrolled] = useState(false);
 
@@ -33,20 +33,31 @@ export default function Navbar({ onOpenReservations }: { onOpenReservations?: ()
       </Link>
 
       {/* Menú Desktop */}
-      <div className="hidden md:flex gap-10 text-[11px] font-bold tracking-[0.2em] text-stone-300 uppercase">
-        <a href="#" className="hover:text-white transition-colors duration-300">Inicio</a>
-        <a href="#servicios" className="hover:text-white transition-colors duration-300">Servicios</a>
-        <a href="#crew" className="hover:text-white transition-colors duration-300">Staff</a>
-        <a href="/tienda" className="text-[#B07D54] hover:text-white transition-colors duration-300">Tienda</a>
+      <div className="hidden md:flex gap-10 text-[11px] font-bold tracking-[0.2em] text-stone-300 uppercase items-center">
+        <Link href="/" className="hover:text-white transition-colors duration-300">Inicio</Link>
+        <Link href="/#servicios" className="hover:text-white transition-colors duration-300">Servicios</Link>
+        <Link href="/#crew" className="hover:text-white transition-colors duration-300">Staff</Link>
+        
+        {/* 👇 Ocultamos la tienda temporalmente para la presentación a Markus */}
+        {/* <Link href="/tienda" className="text-[#B07D54] hover:text-white transition-colors duration-300">Tienda</Link> */}
       </div>
 
-      {/* 👇 Botón de Reserva conectado al Modal Global */}
-      <button 
-        onClick={onOpenReservations}
-        className="bg-transparent border border-[#B07D54] text-[#B07D54] hover:bg-[#B07D54] hover:text-[#161616] px-8 py-2.5 rounded-full font-bold transition-colors duration-300 text-xs tracking-widest uppercase"
-      >
-        Reservar
-      </button>
+      {/* 👇 Botón Inteligente: Si recibe la función abre el modal, si no, lleva al inicio */}
+      {onOpenReservations ? (
+        <button 
+          onClick={onOpenReservations}
+          className="bg-transparent border border-[#B07D54] text-[#B07D54] hover:bg-[#B07D54] hover:text-[#161616] px-8 py-2.5 rounded-full font-bold transition-colors duration-300 text-xs tracking-widest uppercase"
+        >
+          Reservar
+        </button>
+      ) : (
+        <Link 
+          href="/"
+          className="bg-transparent border border-[#B07D54] text-[#B07D54] hover:bg-[#B07D54] hover:text-[#161616] px-8 py-2.5 rounded-full font-bold transition-colors duration-300 text-xs tracking-widest uppercase text-center"
+        >
+          Reservar
+        </Link>
+      )}
       
     </nav>
   );
