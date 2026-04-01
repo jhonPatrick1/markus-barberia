@@ -27,9 +27,7 @@ export default function Hero({ onOpenReservations }: { onOpenReservations: () =>
           />
         </div>
         
-        <p className="text-stone-300 text-xs md:text-sm tracking-[0.4em] uppercase mb-12 font-light flex items-center gap-3" data-aos="fade-up" data-aos-duration="1000">
-          Pueblo Libre <span className="text-[#B07D54]">·</span> Magdalena del Mar <span className="text-[#B07D54]">·</span> Cercado de Lima
-        </p>
+        
 
         {/* 👇 2. Conectamos el botón a la función */}
         <button 

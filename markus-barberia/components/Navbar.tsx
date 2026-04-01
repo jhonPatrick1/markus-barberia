@@ -29,7 +29,7 @@ export default function Navbar({ onOpenReservations }: { onOpenReservations?: ()
       
       {/* Logo MARKUS */}
       <Link href="/" className="font-serif text-3xl font-bold tracking-widest text-white hover:text-[#B07D54] transition-colors duration-300">
-        MARKUS
+        M
       </Link>
 
       {/* Menú Desktop */}
