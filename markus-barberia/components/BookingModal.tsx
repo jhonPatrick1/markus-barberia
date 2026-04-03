@@ -618,7 +618,7 @@ export default function BookingModal({ isOpen, preSelection, onClose }: {
                               <svg className="absolute top-[6px] left-[3px] w-3.5 h-3.5 pointer-events-none stroke-[#161616] opacity-0 peer-checked:opacity-100 transition-opacity" viewBox="0 0 14 14" fill="none"><path d="M2 7L5.5 10.5L12 3" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                             </div>
                             <span className="text-xs text-stone-500 leading-relaxed font-light group-hover:text-stone-300 transition-colors mt-1">
-                              Acepto los términos y quiero recibir recordatorios de mi cita.
+                              Autorizo el uso de mis datos para recibir confirmaciones, recordatorios de mi cita y promociones exclusivas.
                             </span>
                           </label>
                         </div>
