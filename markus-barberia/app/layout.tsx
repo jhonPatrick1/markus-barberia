@@ -34,7 +34,7 @@ export const metadata: Metadata = {
   
   // === OPEN GRAPH (Para Facebook, LinkedIn, WhatsApp) ===
   openGraph: {
-    title: "MARKUS Barbería | Descubre Tu Mejor Versión y Estilo", // Pasó de 47 a 52 caracteres (Verde)
+    title: "Barbería Premium en Lima | Descubre Tu Mejor Versión y Estilo", // Pasó de 47 a 52 caracteres (Verde)
     description: "Reserva tu cita en segundos. Descubre la mejor experiencia de barbería premium en Lima con nuestros especialistas.", // Pasó de 106 a 114 caracteres (Verde)
     url: "/", 
     siteName: "MARKUS Barbería",
