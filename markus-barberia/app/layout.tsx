@@ -33,13 +33,13 @@ export const metadata: Metadata = {
   
   // === OPEN GRAPH (Para Facebook, LinkedIn, WhatsApp) ===
   openGraph: {
-    title: "MARKUS Barbería | Tu Mejor Versión Empieza Aquí",
-    description: "Reserva tu cita en segundos. Descubre la mejor experiencia de barbería en Lima con nuestros especialistas.",
-    url: "markus-barberia-7a4p.vercel.app", // Reemplaza esto con tu dominio real cuando lo tengas
+    title: "MARKUS Barbería | Descubre Tu Mejor Versión y Estilo", // Pasó de 47 a 52 caracteres (Verde)
+    description: "Reserva tu cita en segundos. Descubre la mejor experiencia de barbería premium en Lima con nuestros especialistas.", // Pasó de 106 a 114 caracteres (Verde)
+    url: "markus-barberia-7a4p.vercel.app", 
     siteName: "MARKUS Barbería",
     images: [
       {
-        url: "/og-image.png", // Next.js lo buscará automáticamente en la carpeta /public
+        url: "/og-image.jpg",
         width: 1200,
         height: 630,
         alt: "Instalaciones y estilo de MARKUS Barbería",
@@ -54,7 +54,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "MARKUS Barbería | Estilo sin límites",
     description: "Agenda tu cita online en segundos y vive la experiencia MARKUS.",
-    images: ["/og-image.png"],
+    images: ["/og-image.jpg"],
   },
   
   // (Opcional) Le decimos a los bots de Google que sí indexen la página
