@@ -2,12 +2,11 @@ import type { Metadata } from "next";
 import { Oswald, Raleway } from "next/font/google";
 import "./globals.css";
 
-
 // 2. Configuramos Oswald (para títulos)
 const oswald = Oswald({
   subsets: ["latin"],
-  variable: "--font-oswald", // Esta variable la usaremos en Tailwind
-  weight: ["400", "700"], // Cargamos normal y negrita
+  variable: "--font-oswald",
+  weight: ["400", "700"],
 });
 
 // 3. Configuramos Raleway (para textos)
@@ -18,11 +17,50 @@ const raleway = Raleway({
 });
 
 export const metadata: Metadata = {
-  title: "MARKUS - Barbería | Estilo sin límites",
-  description: "La mejor experiencia de barbería en Pueblo Libre y Cercado de Lima. Cortes clásicos, modernos y cuidado de barba.",
-  keywords: ["barbería", "lima", "corte de pelo", "barba", "pueblo libre", "markus"],
-  icons: {
-    icon: '/favicon.ico', // (Opcional si tienes un icono)
+  // === SEO BÁSICO Y PREMIUM ===
+  title: "MARKUS Barbería | Corte Clásico y Estilo Premium",
+  description: "Vive la experiencia MARKUS. Especialistas en barbería clásica, cortes modernos y perfilado de barba de alto nivel en Pueblo Libre, Cercado de Lima y Magdalena. Agenda tu cita online.",
+  keywords: [
+    "barbería premium", 
+    "barber shop lima", 
+    "corte de cabello hombre", 
+    "cuidado de barba", 
+    "barbería pueblo libre", 
+    "barbería magdalena", 
+    "barbería cercado de lima", 
+    "markus barbería"
+  ],
+  
+  // === OPEN GRAPH (Para Facebook, LinkedIn, WhatsApp) ===
+  openGraph: {
+    title: "MARKUS Barbería | Tu Mejor Versión Empieza Aquí",
+    description: "Reserva tu cita en segundos. Descubre la mejor experiencia de barbería en Lima con nuestros especialistas.",
+    url: "https://markus-barberia.com", // Reemplaza esto con tu dominio real cuando lo tengas
+    siteName: "MARKUS Barbería",
+    images: [
+      {
+        url: "/og-image.jpg", // Next.js lo buscará automáticamente en la carpeta /public
+        width: 1200,
+        height: 630,
+        alt: "Instalaciones y estilo de MARKUS Barbería",
+      },
+    ],
+    locale: "es_PE",
+    type: "website",
+  },
+
+  // === TWITTER CARDS (Para Twitter/X) ===
+  twitter: {
+    card: "summary_large_image",
+    title: "MARKUS Barbería | Estilo sin límites",
+    description: "Agenda tu cita online en segundos y vive la experiencia MARKUS.",
+    images: ["/og-image.jpg"],
+  },
+  
+  // (Opcional) Le decimos a los bots de Google que sí indexen la página
+  robots: {
+    index: true,
+    follow: true,
   },
 };
 
@@ -33,10 +71,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es" suppressHydrationWarning>
-      {/* 4. Inyectamos las variables de las fuentes en el Body */}
-      
       <body className={`${oswald.variable} ${raleway.variable} font-sans antialiased`}>
-     
         {children}
       </body>
     </html>
