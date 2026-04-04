@@ -35,11 +35,11 @@ export const metadata: Metadata = {
   openGraph: {
     title: "MARKUS Barbería | Tu Mejor Versión Empieza Aquí",
     description: "Reserva tu cita en segundos. Descubre la mejor experiencia de barbería en Lima con nuestros especialistas.",
-    url: "https://markus-barberia.com", // Reemplaza esto con tu dominio real cuando lo tengas
+    url: "markus-barberia-7a4p.vercel.app", // Reemplaza esto con tu dominio real cuando lo tengas
     siteName: "MARKUS Barbería",
     images: [
       {
-        url: "/og-image.jpg", // Next.js lo buscará automáticamente en la carpeta /public
+        url: "/og-image.png", // Next.js lo buscará automáticamente en la carpeta /public
         width: 1200,
         height: 630,
         alt: "Instalaciones y estilo de MARKUS Barbería",
@@ -54,7 +54,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "MARKUS Barbería | Estilo sin límites",
     description: "Agenda tu cita online en segundos y vive la experiencia MARKUS.",
-    images: ["/og-image.jpg"],
+    images: ["/og-image.png"],
   },
   
   // (Opcional) Le decimos a los bots de Google que sí indexen la página
