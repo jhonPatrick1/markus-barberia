@@ -87,11 +87,20 @@ export default function AdminDashboard() {
     const { data: dataSedes } = await supabase.from('sedes').select('*');
     if (dataSedes) setSedes(dataSedes);
 
-    const { data: dataCitas } = await supabase
+    // 1. Preparamos el query
+    let query = supabase
       .from('citas')
       .select(`*, barbero:barberos(nombre), sede:sedes(nombre), cita_servicios(servicios(nombre, precio))`)
       .order('fecha_hora', { ascending: true });
 
+    // 2. 🔥 FIX SEDE: Filtramos directo en la BD para mayor seguridad y velocidad
+    if (userProfile.tipo === "sede") {
+      query = query.eq('sede_id', userProfile.refId);
+    } else if (userProfile.tipo === "barbero") {
+      query = query.eq('barbero_id', userProfile.refId);
+    }
+
+    const { data: dataCitas } = await query;
     if (dataCitas) setCitas(dataCitas);
     setIsLoading(false);
   };

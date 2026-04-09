@@ -108,8 +108,12 @@ export default function AgendaView({ citasRaw, sedes, userProfile, cargarDatos, 
     if (userProfile.tipo === "master" && filtroSedeMaster !== "todas") return c.sede_id?.toString() === filtroSedeMaster;
     return true;
   });
-  const citasDelDia = citasFiltradas.filter((cita: any) => getLocalYYYYMMDD(new Date(cita.fecha_hora)) === fechaSeleccionada);
-
+  const citasDelDia = citasFiltradas.filter((cita: any) => {
+    if (!cita.fecha_hora) return false;
+    // 🔥 FIX TIMEZONE: Reemplazamos el espacio por la 'T' estándar
+    const safeDateStr = cita.fecha_hora.replace(' ', 'T');
+    return getLocalYYYYMMDD(new Date(safeDateStr)) === fechaSeleccionada;
+  });
   const isBarbero = userProfile.tipo === "barbero";
 
   return (
@@ -206,6 +210,7 @@ export default function AgendaView({ citasRaw, sedes, userProfile, cargarDatos, 
             </thead>
             <tbody className="divide-y divide-stone-100">
               {citasDelDia.map((cita: any) => {
+                const safeDateStr = cita.fecha_hora.replace(' ', 'T');
                 const fechaLocal = new Date(cita.fecha_hora);
                 const isAdelantado = cita.estado_pago === 'adelantado';
                 const isPagado = cita.estado_pago === 'pagado';
