@@ -89,7 +89,7 @@ export default function AdminDashboard() {
 
     const { data: dataCitas } = await supabase
       .from('citas')
-      .select(`*, barbero:barberos(nombre), sede:sedes(nombre)`)
+      .select(`*, barbero:barberos(nombre), sede:sedes(nombre), cita_servicios(servicios(nombre, precio))`)
       .order('fecha_hora', { ascending: true });
 
     if (dataCitas) setCitas(dataCitas);

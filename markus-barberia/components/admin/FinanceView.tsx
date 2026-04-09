@@ -176,7 +176,7 @@ export default function FinanceView({ citasRaw, sedes, userProfile }: any) {
       </div>
 
       {/* TABLAS FINANCIERAS Y RANKINGS */}
-      {/* 👇 NUEVO GRID: Acomodado para 2 o 3 columnas 👇 */}
+      {/* NUEVO GRID: Acomodado para 2 o 3 columnas */}
       <div className={`grid grid-cols-1 ${mostrarIngresosSede ? 'lg:grid-cols-3' : 'md:grid-cols-2'} gap-6`}>
         
         {/* Recaudación por Método */}
@@ -222,7 +222,7 @@ export default function FinanceView({ citasRaw, sedes, userProfile }: any) {
           )}
         </div>
 
-        {/* 👇 NUEVA TARJETA: Ingresos por Sede (Renderizado condicional) 👇 */}
+        {/* NUEVA TARJETA: Ingresos por Sede (Renderizado condicional) */}
         {mostrarIngresosSede && (
           <div className="bg-white p-6 rounded-xl border border-stone-200 shadow-sm animate-fade-in">
             <div className="flex items-center gap-3 mb-4 border-b border-stone-100 pb-2">

@@ -6,19 +6,18 @@ import ServicesSection from "../components/ServicesSection";
 import Hero from "../components/Hero"; 
 import GoogleReviews from "../components/GoogleReviews";
 import Gallery from "@/components/Gallery";
-import CrewSection from "../components/CrewSection";
+import CrewSection from "../components/SedesSection";
 import BookingModal from "../components/BookingModal";
-import { supabase } from "../lib/supabase"; // 👇 IMPORTAMOS SUPABASE AQUÍ
+import { supabase } from "../lib/supabase"; 
+import SedesSection from "@/components/SedesSection";
 
-// Definimos la estructura de la pre-selección para Typescript
 interface PreSelection {
   sede?: any;
   barbero?: any;
 }
 
 export default function Home() {
-  // 👇 1. AJUSTE: Estado "inteligente" para el Modal
-  // Ahora es un objeto que controla la visibilidad y los datos pre-seleccionados.
+
   const [bookingModalState, setBookingModalState] = useState<{
     isOpen: boolean;
     preSelection?: PreSelection;
@@ -27,9 +26,6 @@ export default function Home() {
     preSelection: undefined
   });
 
-  // 👇 2. AJUSTE: Cargamos las sedes en la página principal
-  // Esto es vital para poder "mapear" el texto "Pueblo Libre" de la sección Crew
-  // con el objeto Sede real que viene de Supabase.
   const [sedesDB, setSedesDB] = useState<any[]>([]);
   const [isLoadingSedes, setIsLoadingSedes] = useState(true);
 
@@ -55,27 +51,22 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-[#FDFBF7] text-stone-900 font-sans selection:bg-[#B07D54] selection:text-white relative">
       
-      {/*👇 Pasamos la función de abrir reservas al Navbar */}
+      {/*Pasamos la función de abrir reservas al Navbar */}
       <Navbar onOpenReservations={openBookingModal} />
 
-      {/*👇 Pasamos la función de abrir reservas al Hero */}
+      {/*Pasamos la función de abrir reservas al Hero */}
       <Hero onOpenReservations={openBookingModal} />
 
-      {/*👇 Pasamos la función de abrir reservas a Servicios */}
+      {/*Pasamos la función de abrir reservas a Servicios */}
       <ServicesSection onOpenReservations={openBookingModal} />
       
-      {/*👇 IMPORTANTE: Pasamos las sedes y la función de abrir a CrewSection */}
-      <CrewSection 
-        sedesDB={sedesDB} 
-        isLoadingSedes={isLoadingSedes} 
-        onOpenReservations={openBookingModal} 
-      /> 
-      
+      {/*IMPORTANTE: Pasamos las sedes y la función de abrir a CrewSection */}
+      <SedesSection /> 
       <Gallery />
       <GoogleReviews />
       <Footer />
 
-      {/*👇 Botón WhatsApp Flotante */}
+      {/*Botón WhatsApp Flotante */}
       <a 
         href="https://wa.me/51917876813?text=Hola%20Markus%2C%20quisiera%20reservar%20una%20cita."
         target="_blank"
@@ -88,7 +79,7 @@ export default function Home() {
         </svg>
       </a>
 
-      {/*👇 3. AJUSTE: El Modal inteligente al final */}
+      {/*3. AJUSTE: El Modal inteligente al final */}
       <BookingModal 
         isOpen={bookingModalState.isOpen} 
         preSelection={bookingModalState.preSelection} 

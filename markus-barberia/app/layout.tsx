@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import { Oswald, Raleway } from "next/font/google";
 import "./globals.css";
 
+// 1. IMPORTAMOS TU ESCUDO DE SEGURIDAD
+import SecurityShield from "@/components/SecurityShield";
+
 // 2. Configuramos Oswald (para títulos)
 const oswald = Oswald({
   subsets: ["latin"],
@@ -34,8 +37,8 @@ export const metadata: Metadata = {
   
   // === OPEN GRAPH (Para Facebook, LinkedIn, WhatsApp) ===
   openGraph: {
-    title: "Barbería Premium | Descubre Tu Mejor Versión y Estilo", // Pasó de 47 a 52 caracteres (Verde)
-    description: "Reserva tu cita en segundos. Descubre la mejor experiencia de barbería premium en Lima con nuestros especialistas.", // Pasó de 106 a 114 caracteres (Verde)
+    title: "Barbería Premium | Descubre Tu Mejor Versión y Estilo",
+    description: "Reserva tu cita en segundos. Descubre la mejor experiencia de barbería premium en Lima con nuestros especialistas.",
     url: "/", 
     siteName: "MARKUS Barbería",
     images: [
@@ -58,7 +61,7 @@ export const metadata: Metadata = {
     images: ["/og-image.jpg"],
   },
   
-  // (Opcional) Le decimos a los bots de Google que sí indexen la página
+  // === ROBOTS (Para motores de búsqueda) ===
   robots: {
     index: true,
     follow: true,
@@ -73,6 +76,9 @@ export default function RootLayout({
   return (
     <html lang="es" suppressHydrationWarning>
       <body className={`${oswald.variable} ${raleway.variable} font-sans antialiased`}>
+        {/* 4. INVOCAMOS EL ESCUDO AQUÍ PARA PROTEGER TODA LA WEB */}
+        <SecurityShield />
+        
         {children}
       </body>
     </html>

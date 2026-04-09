@@ -22,6 +22,7 @@ const servicesData: Record<string, Array<{ title: string; price: string; time: s
     { title: "Facial Premium", price: "S/ 90.00", time: "1h", desc: "Limpieza profunda, vapor y mascarilla negra." },
   ],
   combos: [
+    { title: "Camuflaje de Canas + Corte", price: "S/ 50.00", time: "1h 30m", desc: "Renueva tu look y refresca tu piel." },
     { title: "Corte + Barba", price: "S/ 60.00", time: "1h 30m", desc: "El paquete completo para renovar tu look." },
     { title: "Corte + Barba + Facial", price: "S/ 80.00", time: "2h", desc: "Experiencia total de relajación y estilo." },
   ],
@@ -31,16 +32,15 @@ const servicesData: Record<string, Array<{ title: string; price: string; time: s
     { title: "Platinado", price: "S/ 250.00", time: "4h", desc: "Decoloración global para un blanco perfecto." },
   ],
   permanentes: [
-    { title: "Ondulación", price: "S/ 185.00", time: "2h", desc: "Rizos definidos y con volumen." },
-    { title: "Alisado", price: "S/ 185.00", time: "2h", desc: "Cabello lacio y manejable por meses." },
+    { title: "Ondulación", price: "S/ 185.00", time: "3h", desc: "Rizos definidos y con volumen." },
+    { title: "Alisado", price: "S/ 100.00", time: "1h 30m", desc: "Cabello lacio y manejable por meses." },
   ],
   extras: [
-    { title: "Cejas / Diseños", price: "S/ 10.00", time: "15m", desc: "Perfilado de cejas o líneas en el cabello." },
-    { title: "Hidratación Capilar", price: "S/ 15.00", time: "20m", desc: "Revitaliza tu cabello después del corte." },
+    { title: "Cejas / Diseños", price: "S/ 20.00", time: "15m", desc: "Perfilado de cejas o líneas en el cabello." },
+    { title: "Hidratación Capilar", price: "S/ 35.00", time: "30m", desc: "Revitaliza tu cabello después del corte." },
   ]
 };
 
-// 👇 ACEPTAMOS onOpenReservations COMO PROP
 export default function ServicesSection({ onOpenReservations }: { onOpenReservations: () => void }) {
   const [activeTab, setActiveTab] = useState("servicios");
 
@@ -50,50 +50,65 @@ export default function ServicesSection({ onOpenReservations }: { onOpenReservat
   return (
     <section id="servicios" className="py-24 bg-[#FDFBF7] px-4 md:px-8">
       
-      <div className="max-w-7xl mx-auto bg-[#161616] rounded-[2rem] p-8 md:p-12 lg:p-16 flex flex-col lg:flex-row gap-12 lg:gap-20 shadow-2xl overflow-hidden relative">
+      {/* Contenedor Principal: flex-col en móvil, lg:flex-row en desktop */}
+      <div className="max-w-7xl mx-auto bg-[#161616] rounded-[2rem] p-6 sm:p-8 md:p-12 lg:p-16 flex flex-col lg:flex-row gap-8 lg:gap-20 shadow-2xl overflow-hidden relative">
         
         <div className="flex-1 flex flex-col">
-          <h2 className="font-serif text-4xl md:text-6xl text-white mb-8" data-aos="fade-up">
+          
+          {/* 1. TÍTULO ALINEADO: Centrado en móvil, Izquierda en desktop */}
+          <h2 className="font-serif text-4xl md:text-6xl text-white mb-6 md:mb-8 text-center lg:text-left" data-aos="fade-up">
             Nuestros Servicios
           </h2>
 
-          <div className="flex flex-wrap items-center gap-3 text-[10px] md:text-xs tracking-[0.2em] uppercase mb-8 text-stone-500 border-b border-stone-800 pb-6" data-aos="fade-up" data-aos-delay="100">
-            {categories.map((cat, index) => (
-              <div key={cat.id} className="flex items-center gap-3">
-                <button 
-                  onClick={() => setActiveTab(cat.id)} 
-                  className={`transition-colors duration-300 hover:text-white ${activeTab === cat.id ? 'text-[#B07D54] font-bold' : ''}`}
-                >
-                  {cat.label}
-                </button>
-                {index < categories.length - 1 && <span className="text-stone-700">|</span>}
-              </div>
+          {/* 2. MENÚ TIPO PILL: Scroll horizontal en móvil sin barra visible */}
+          <div 
+            /* Se eliminó el uppercase y tracking del contenedor para uniformidad */
+            className="flex overflow-x-auto items-center gap-2 lg:gap-3 text-xs tracking-widest uppercase mb-8 border-b border-stone-800 pb-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" 
+            data-aos="fade-up" 
+            data-aos-delay="100"
+          >
+            {categories.map((cat) => (
+              <button 
+                key={cat.id}
+                onClick={() => setActiveTab(cat.id)} 
+                /* 👇 Reduje ligeramente el padding horizontal (px-4) para asegurar que entren todos en PC 👇 */
+                className={`shrink-0 text-[10px] md:text-xs tracking-widest font-medium uppercase px-4 lg:px-5 py-2.5 rounded-full transition-all duration-300 border ${
+                  activeTab === cat.id 
+                    ? 'bg-[#B07D54] text-white border-[#B07D54] shadow-lg' 
+                    : 'text-stone-400 bg-transparent border-white/20 hover:text-white hover:bg-stone-800/50 hover:border-white/60'
+                }`}
+              >
+                {cat.label}
+              </button>
             ))}
           </div>
 
+          {/* 3. LISTA DE SERVICIOS OPTIMIZADA */}
           <div className="flex flex-col">
             {servicesData[activeTab]?.map((service, index) => (
               <div 
                 key={index} 
-                // 👇 REEMPLAZAMOS EL onClick VIEJO POR ESTE
                 onClick={onOpenReservations} 
-                className="group flex flex-col md:flex-row md:items-center justify-between py-6 border-b border-stone-800 cursor-pointer hover:border-stone-500 transition-colors" 
+                /* En celular muy pequeño (sm), el precio baja. En intermedio, se alinea a la derecha. */
+                className="group flex flex-col sm:flex-row sm:items-center justify-between py-5 md:py-6 border-b border-stone-800 cursor-pointer hover:border-stone-500 transition-colors gap-3 sm:gap-0" 
                 data-aos="fade-up" 
                 data-aos-delay={index * 100}
               >
-                <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-8 flex-1">
-                  <h3 className="font-serif text-xl md:text-2xl text-white uppercase group-hover:text-[#B07D54] transition-colors md:w-1/2">
+                <div className="flex flex-col md:flex-row md:items-center gap-1 md:gap-8 flex-1">
+                  <h3 className="font-serif text-lg md:text-2xl text-white uppercase group-hover:text-[#B07D54] transition-colors md:w-1/2">
                     {service.title}
                   </h3>
-                  <div className="flex flex-col text-[9px] md:text-[10px] text-stone-400 uppercase tracking-widest md:w-1/2">
-                    <span className="text-stone-300 font-semibold mb-1">{service.time} | DETALLES</span>
-                    <span className="leading-relaxed">{service.desc}</span>
+                  <div className="flex flex-col text-[10px] md:text-[11px] text-stone-400 md:w-1/2">
+                    <span className="text-stone-300 font-semibold mb-1 tracking-widest uppercase">{service.time} | DETALLES</span>
+                    {/* Quitamos el uppercase de la descripción para mejorar legibilidad móvil */}
+                    <span className="leading-relaxed normal-case tracking-normal">{service.desc}</span>
                   </div>
                 </div>
                 
-                <div className="flex items-center gap-3 mt-4 md:mt-0">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#B07D54]"></span>
-                  <span className="text-xl md:text-3xl font-serif text-white group-hover:text-[#B07D54] transition-colors">
+                <div className="flex items-center gap-3 sm:justify-end">
+                  {/* Punto decorativo oculto en celular pequeño para ahorrar espacio */}
+                  <span className="hidden sm:block w-1.5 h-1.5 rounded-full bg-[#B07D54]"></span>
+                  <span className="text-xl md:text-3xl font-serif text-white group-hover:text-[#B07D54] transition-colors whitespace-nowrap">
                     {service.price}
                   </span>
                 </div>
@@ -102,7 +117,8 @@ export default function ServicesSection({ onOpenReservations }: { onOpenReservat
           </div>
         </div>
 
-        <div key={activeTab} className="hidden lg:block w-[35%] relative rounded-2xl overflow-hidden" data-aos="fade-left" data-aos-delay="300">
+        {/* IMAGEN: Oculta en móviles, visible y estilizada en desktop */}
+        <div key={activeTab} className="hidden lg:block w-[40%] relative rounded-2xl overflow-hidden" data-aos="fade-left" data-aos-delay="300">
           <Image 
             src={currentImage} 
             alt={`Detalle de servicio ${activeTab} en Markus`} 

@@ -14,7 +14,7 @@ export default function Sidebar({ activeView, setActiveView, userProfile, onLogo
         <h1 className="text-xl font-bold font-serif tracking-widest uppercase flex items-center gap-2">
           <Scissors size={20} /> MARKUS
         </h1>
-        {/* 👇 SOLUCIÓN AQUÍ: Agregamos aria-label 👇 */}
+        {/*  */}
         <button 
           onClick={() => setIsOpen(true)} 
           aria-label="Abrir menú de navegación"

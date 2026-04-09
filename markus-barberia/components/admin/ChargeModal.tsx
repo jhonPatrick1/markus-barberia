@@ -1,10 +1,18 @@
 "use client";
 
-import { useState } from "react";
-import { CheckCircle2, X } from "lucide-react";
+import { useState, useEffect } from "react";
+import { CheckCircle2, X, Wallet } from "lucide-react";
 
 export default function ChargeModal({ cita, onClose, onConfirmarCobro }: any) {
-  const [monto, setMonto] = useState<string>("35.00"); 
+  // Lógica Matemática de Cobro
+  // Si la BD no tiene monto_total (citas antiguas), asumimos 35 por seguridad.
+  const total = Number(cita.monto_total) || 35; 
+  const adelanto = Number(cita.monto_adelantado) || 0;
+  
+  // Lo que realmente debe cobrar hoy el barbero
+  const restanteAproximado = total > adelanto ? (total - adelanto) : 0;
+
+  const [monto, setMonto] = useState<string>(restanteAproximado.toFixed(2)); 
   const [metodoPago, setMetodoPago] = useState("Efectivo");
   const [isProcesando, setIsProcesando] = useState(false);
 
@@ -31,9 +39,20 @@ export default function ChargeModal({ cita, onClose, onConfirmarCobro }: any) {
           <p className="text-xs text-stone-500 mt-1 uppercase tracking-widest font-medium">Cliente: {cita.cliente_nombre}</p>
         </div>
 
+        {/* ALERTA DE ADELANTO PARA EL BARBERO */}
+        {adelanto > 0 && (
+          <div className="bg-emerald-50 border border-emerald-200 p-3 rounded-lg mb-6 flex items-start gap-3">
+            <Wallet className="text-emerald-600 shrink-0 mt-0.5" size={18} />
+            <div className="text-left">
+              <p className="text-emerald-800 text-xs font-bold uppercase tracking-widest">¡Pagó Adelanto!</p>
+              <p className="text-emerald-600 text-xs font-medium mt-0.5">El cliente ya dejó S/ {adelanto.toFixed(2)} por Yape. Solo cóbrale la diferencia.</p>
+            </div>
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label htmlFor="input-monto" className="block text-xs font-bold text-stone-500 uppercase mb-1 tracking-wider">Monto Final (S/)</label>
+            <label htmlFor="input-monto" className="block text-xs font-bold text-stone-500 uppercase mb-1 tracking-wider">Monto a cobrar AHORA (S/)</label>
             <input 
               id="input-monto"
               type="number" step="0.10" required
@@ -43,7 +62,7 @@ export default function ChargeModal({ cita, onClose, onConfirmarCobro }: any) {
           </div>
           
           <div>
-            <label htmlFor="select-metodo" className="block text-xs font-bold text-stone-500 uppercase mb-1 tracking-wider">Método de Pago</label>
+            <label htmlFor="select-metodo" className="block text-xs font-bold text-stone-500 uppercase mb-1 tracking-wider">Método de Pago Restante</label>
             <select 
               id="select-metodo"
               value={metodoPago} onChange={e => setMetodoPago(e.target.value)}

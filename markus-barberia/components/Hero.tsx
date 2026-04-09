@@ -1,9 +1,8 @@
 import Image from "next/image";
 
-// 👇 1. Le decimos que acepte onOpenReservations
 export default function Hero({ onOpenReservations }: { onOpenReservations: () => void }) {
   return (
-    <section className="relative h-screen flex flex-col items-center justify-center bg-[#101010] overflow-hidden">
+    <section id="inicio" className="relative h-screen flex flex-col items-center justify-center bg-[#101010] overflow-hidden">
       
       <div className="absolute inset-0 pointer-events-none">
         <Image 
@@ -19,22 +18,34 @@ export default function Hero({ onOpenReservations }: { onOpenReservations: () =>
 
       <div className="relative z-20 flex flex-col items-center text-center px-4 w-full max-w-5xl">
         
-        <div className="mb-10 md:mb-12 w-full max-w-[280px] md:max-w-3xl lg:max-w-5xl" data-aos="fade-up" data-aos-duration="1000">
+        {/* Contenedor del Logo y Subtítulo */}
+        <div className="mb-10 md:mb-12 flex flex-col items-center w-full max-w-[280px] md:max-w-3xl lg:max-w-5xl">
           <img 
             src="/markus.png" 
             alt="MARKUS Barbería" 
             className="w-full h-auto drop-shadow-[0_10px_20px_rgba(0,0,0,0.8)]" 
+            data-aos="fade-up" 
+            data-aos-duration="1000"
           />
+          
+          {/* Nuevo Subtítulo Premium con animación en cascada */}
+          <p 
+            className="text-sm md:text-lg text-stone-300 font-light tracking-[0.3em] uppercase mt-6 md:mt-8"
+            data-aos="fade-up" 
+            data-aos-duration="1000" 
+            data-aos-delay="200"
+          >
+            Estilo sin límites
+          </p>
         </div>
         
-        
-
-        {/* 👇 2. Conectamos el botón a la función */}
+        {/* Botón de Reserva */}
         <button 
           onClick={onOpenReservations}
           className="group relative px-10 py-4 bg-transparent border-2 border-stone-500 text-stone-100 rounded-full transition-all duration-500 hover:border-[#B07D54] hover:text-[#B07D54] hover:shadow-[0_0_20px_rgba(176,125,84,0.4)]"
           data-aos="fade-up" 
           data-aos-duration="1000"
+          data-aos-delay="400"
         >
           <span className="relative z-10 uppercase tracking-widest text-xs font-bold">
             Reservar Experiencia
@@ -43,7 +54,7 @@ export default function Hero({ onOpenReservations }: { onOpenReservations: () =>
         </button>
       </div>
 
-      <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center z-20" data-aos="fade-up" data-aos-duration="1000">
+      <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center z-20" data-aos="fade-up" data-aos-duration="1000" data-aos-delay="600">
         <span className="text-[10px] text-stone-400 uppercase tracking-[0.3em] mb-4 font-medium">Descubre más</span>
         <div className="animate-bounce">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="text-stone-500">

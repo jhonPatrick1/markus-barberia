@@ -8,9 +8,14 @@ export default function AgendaView({ citasRaw, sedes, userProfile, cargarDatos, 
   // === ESTADOS PARA MODALES ===
   const [citaACobrar, setCitaACobrar] = useState<any | null>(null);
   const [citaACancelar, setCitaACancelar] = useState<number | null>(null);
+  const [citaAVerificarPago, setCitaAVerificarPago] = useState<any | null>(null); 
   const [isCanceling, setIsCanceling] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
 
-  // === ESTADOS PARA FECHA Y FILTROS ===
+  // === ESTADOS PARA FINANZAS ===
+  const [nuevoEstadoPago, setNuevoEstadoPago] = useState("adelantado");
+  const [montoAdelantado, setMontoAdelantado] = useState("");
+
   const [filtroSedeMaster, setFiltroSedeMaster] = useState<string>("todas");
   
   const getLocalYYYYMMDD = (date: Date) => {
@@ -22,9 +27,24 @@ export default function AgendaView({ citasRaw, sedes, userProfile, cargarDatos, 
   const [fechaSeleccionada, setFechaSeleccionada] = useState<string>(getLocalYYYYMMDD(new Date()));
 
   // === LÓGICA DE BASE DE DATOS ===
-  const procesarCobro = async (citaId: number, monto: number, metodo: string) => {
+  // 👇 AQUÍ ESTÁ LA MAGIA FINANCIERA ACTUALIZADA 👇
+  const procesarCobro = async (citaId: number, montoEntregadoHoy: number, metodo: string) => {
     try {
-      const { error } = await supabase.from('citas').update({ estado: 'completada', monto_cobrado: monto, metodo_pago: metodo }).eq('id', citaId);
+      // 1. Buscamos la cita para saber cuánto dejó de adelanto previamente
+      const citaActual = citasRaw.find((c: any) => c.id === citaId);
+      const adelantoPrevio = Number(citaActual?.monto_adelantado || 0);
+      
+      // 2. Sumamos el adelanto + lo que el barbero cobra ahorita
+      const montoTotalReal = adelantoPrevio + montoEntregadoHoy;
+
+      // 3. Guardamos el MONTO TOTAL en la caja para que finanzas cuadre
+      const { error } = await supabase.from('citas').update({ 
+        estado: 'completada', 
+        monto_cobrado: montoTotalReal, 
+        metodo_pago: metodo,
+        estado_pago: 'pagado'
+      }).eq('id', citaId);
+      
       if (error) throw error;
       setCitaACobrar(null);
       cargarDatos();
@@ -50,7 +70,31 @@ export default function AgendaView({ citasRaw, sedes, userProfile, cargarDatos, 
     }
   };
 
-  // === NAVEGACIÓN ===
+  const procesarVerificacionPago = async () => {
+    if (!citaAVerificarPago) return;
+    setIsVerifying(true);
+    try {
+      const { error } = await supabase.from('citas').update({ 
+        estado_pago: nuevoEstadoPago, 
+        monto_adelantado: Number(montoAdelantado) || 0 
+      }).eq('id', citaAVerificarPago.id);
+      
+      if (error) throw error;
+      setCitaAVerificarPago(null);
+      cargarDatos();
+    } catch (error) {
+      alert("Error al verificar el pago.");
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  const abrirModalVerificacion = (cita: any) => {
+    setNuevoEstadoPago(cita.estado_pago === 'pendiente' ? 'adelantado' : cita.estado_pago);
+    setMontoAdelantado(cita.monto_adelantado > 0 ? cita.monto_adelantado.toString() : "");
+    setCitaAVerificarPago(cita);
+  };
+
   const cambiarDia = (dias: number) => {
     const [year, month, day] = fechaSeleccionada.split('-').map(Number);
     setFechaSeleccionada(getLocalYYYYMMDD(new Date(year, month - 1, day + dias)));
@@ -71,7 +115,7 @@ export default function AgendaView({ citasRaw, sedes, userProfile, cargarDatos, 
   return (
     <div className="space-y-6 animate-fade-in">
       
-      {/* MODALES */}
+      {/* MODALES EXISTENTES */}
       {citaACobrar && <ChargeModal cita={citaACobrar} onClose={() => setCitaACobrar(null)} onConfirmarCobro={procesarCobro} />}
       {citaACancelar && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
@@ -86,17 +130,47 @@ export default function AgendaView({ citasRaw, sedes, userProfile, cargarDatos, 
         </div>
       )}
 
-      {/* CABECERA EXCLUSIVA PARA BARBEROS (Ya que ellos no ven el Sidebar) */}
+      {/* NUEVO MODAL: VERIFICAR PAGO */}
+      {citaAVerificarPago && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-white p-6 md:p-8 rounded-2xl shadow-2xl max-w-sm w-full text-left">
+            <h3 className="text-xl font-bold text-gray-900 mb-2 border-b pb-2">Verificar Pago</h3>
+            <p className="text-gray-500 text-xs mb-4 uppercase tracking-widest font-bold">Cliente: {citaAVerificarPago.cliente_nombre}</p>
+            
+            <div className="space-y-4 mb-6">
+              <div>
+                <label htmlFor="estado-pago" className="block text-xs font-bold text-gray-500 uppercase mb-1">Estado del Pago</label>
+                <select id="estado-pago" aria-label="Estado del Pago" value={nuevoEstadoPago} onChange={e => setNuevoEstadoPago(e.target.value)} className="w-full border-2 border-gray-200 rounded-lg p-2.5 outline-none font-medium text-sm">
+                  <option value="pendiente">Pendiente</option>
+                  <option value="adelantado">Adelanto Verificado (Yape/Plin)</option>
+                  <option value="pagado">Pagado 100%</option>
+                </select>
+              </div>
+              <div>
+                <label htmlFor="monto-adelantado" className="block text-xs font-bold text-gray-500 uppercase mb-1">Monto Pagado (S/)</label>
+                <input id="monto-adelantado" aria-label="Monto Adelantado" type="number" step="0.10" value={montoAdelantado} onChange={e => setMontoAdelantado(e.target.value)} placeholder="Ej. 20.00" className="w-full border-2 border-gray-200 rounded-lg p-2.5 outline-none font-medium text-sm" />
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <button onClick={() => setCitaAVerificarPago(null)} disabled={isVerifying} className="flex-1 py-3 rounded-lg font-bold text-sm bg-gray-100 text-gray-700">Cancelar</button>
+              <button onClick={procesarVerificacionPago} disabled={isVerifying} className="flex-1 py-3 rounded-lg font-bold text-sm bg-emerald-500 text-white shadow-lg">{isVerifying ? "Guardando..." : "Guardar Pago"}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CABECERA EXCLUSIVA PARA BARBEROS */}
       {isBarbero && (
          <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 bg-white p-6 rounded-xl shadow-sm border border-stone-200">
-            <div>
-              <h1 className="text-3xl font-bold font-serif tracking-tighter uppercase">MARKUS</h1>
-              <p className="text-stone-500 text-sm mt-1 font-medium">Mi Agenda Personal</p>
-            </div>
-            <div className="flex gap-3">
-              <button onClick={cargarDatos} className="text-stone-500 hover:text-black font-medium text-sm px-4 py-2 border border-stone-200 rounded-lg">🔄 Refrescar</button>
-              <button onClick={onLogout} className="text-stone-500 hover:text-red-600 font-medium text-sm px-4 py-2 border border-stone-200 rounded-lg">Cerrar Sesión</button>
-            </div>
+           <div>
+             <h1 className="text-3xl font-bold font-serif tracking-tighter uppercase">MARKUS</h1>
+             <p className="text-stone-500 text-sm mt-1 font-medium">Mi Agenda Personal</p>
+           </div>
+           <div className="flex gap-3">
+             <button onClick={cargarDatos} className="text-stone-500 hover:text-black font-medium text-sm px-4 py-2 border border-stone-200 rounded-lg">🔄 Refrescar</button>
+             <button onClick={onLogout} className="text-stone-500 hover:text-red-600 font-medium text-sm px-4 py-2 border border-stone-200 rounded-lg">Cerrar Sesión</button>
+           </div>
          </div>
       )}
 
@@ -126,29 +200,71 @@ export default function AgendaView({ citasRaw, sedes, userProfile, cargarDatos, 
               <tr className="bg-stone-100 text-stone-500 text-xs uppercase tracking-wider border-b border-stone-200">
                 <th className="p-4 font-bold">Hora</th>
                 <th className="p-4 font-bold">Cliente</th>
-                <th className="p-4 font-bold">Detalle</th>
+                <th className="p-4 font-bold">Detalle y Servicios</th>
                 <th className="p-4 text-center font-bold">Estado / Acción</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-stone-100">
               {citasDelDia.map((cita: any) => {
                 const fechaLocal = new Date(cita.fecha_hora);
+                const isAdelantado = cita.estado_pago === 'adelantado';
+                const isPagado = cita.estado_pago === 'pagado';
+                const isYapePorVerificar = cita.metodo_pago === 'Yape Anticipado' && cita.estado_pago === 'pendiente';
+                
                 return (
                   <tr key={cita.id} className={`transition-colors ${cita.estado === 'completada' ? 'bg-emerald-50/30' : 'hover:bg-stone-50'}`}>
-                    <td className="p-4"><div className="font-bold text-black">{fechaLocal.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div></td>
-                    <td className="p-4">
-                      <div className="font-bold text-sm text-stone-900">{cita.cliente_nombre} {cita.cliente_apellido}</div>
-                      <div className="text-xs text-stone-500">{cita.cliente_celular}</div>
+                    <td className="p-4 align-top"><div className="font-bold text-black mt-1">{fechaLocal.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div></td>
+                    <td className="p-4 align-top">
+                      <div className="font-bold text-sm text-stone-900 mt-1">{cita.cliente_nombre} {cita.cliente_apellido}</div>
+                      <div className="text-xs text-stone-500 mt-0.5">{cita.cliente_celular}</div>
                     </td>
-                    <td className="p-4">
-                      <div className="flex flex-col gap-1 items-start">
-                        <span className="bg-stone-100 px-2.5 py-1 rounded-md text-xs font-bold text-stone-700 border border-stone-200">✂️ {cita.barbero?.nombre}</span>
-                        {userProfile.tipo === "master" && (
-                          <span className="bg-blue-50 px-2.5 py-1 rounded-md text-xs font-bold text-blue-700 border border-blue-100 mt-1">📍 {cita.sede?.nombre}</span>
+                    <td className="p-4 align-top">
+                      <div className="flex flex-col gap-2 items-start w-full max-w-xs">
+                        
+                        {/* Etiquetas de Barbero y Sede */}
+                        <div className="flex gap-2 flex-wrap">
+                          <span className="bg-stone-100 px-2 py-1 rounded border border-stone-200 text-[11px] font-bold text-stone-700">✂️ {cita.barbero?.nombre}</span>
+                          {userProfile.tipo === "master" && (
+                            <span className="bg-blue-50 px-2 py-1 rounded border border-blue-100 text-[11px] font-bold text-blue-700">📍 {cita.sede?.nombre}</span>
+                          )}
+                        </div>
+
+                        {/* TICKET DE SERVICIOS Y TOTAL */}
+                        <div className="w-full bg-stone-50 border border-stone-200 rounded-lg p-3 mt-1">
+                          <p className="text-[10px] uppercase tracking-widest text-stone-500 font-bold mb-2">Servicios Solicitados:</p>
+                          <ul className="text-xs text-stone-700 space-y-1 mb-3">
+                            {cita.cita_servicios && cita.cita_servicios.length > 0 ? (
+                              cita.cita_servicios.map((relacion: any, idx: number) => (
+                                <li key={idx} className="flex justify-between items-center">
+                                  <span className="truncate pr-2">• {relacion.servicios?.nombre || 'Servicio'}</span>
+                                  <span className="text-stone-500 font-medium whitespace-nowrap">S/ {relacion.servicios?.precio || '0'}</span>
+                                </li>
+                              ))
+                            ) : (
+                              <li className="text-stone-400 italic font-light">- No especificados -</li>
+                            )}
+                          </ul>
+                          
+                          <div className="border-t border-stone-200 pt-2 flex justify-between items-center">
+                            <span className="text-[10px] uppercase tracking-widest text-stone-500 font-bold">Total a Cobrar</span>
+                            <span className="text-sm font-bold text-[#B07D54]">S/ {Number(cita.monto_total || 0).toFixed(2)}</span>
+                          </div>
+                        </div>
+
+                        {/* BADGES FINANCIEROS */}
+                        {isAdelantado && (
+                          <span className="bg-emerald-50 text-emerald-700 px-2 py-1 rounded text-[10px] font-bold uppercase tracking-widest border border-emerald-200 w-full text-center">
+                            Adelanto Pagado: S/ {Number(cita.monto_adelantado).toFixed(2)}
+                          </span>
+                        )}
+                        {isPagado && (
+                          <span className="bg-emerald-500 text-white px-2 py-1 rounded text-[10px] font-bold uppercase tracking-widest w-full text-center">
+                            Pago Completo 100%
+                          </span>
                         )}
                       </div>
                     </td>
-                    <td className="p-4 text-center">
+                    <td className="p-4 text-center align-top pt-5">
                       {cita.estado === 'completada' ? (
                         <span className="text-emerald-600 font-bold text-xs uppercase tracking-widest bg-emerald-100 px-3 py-1.5 rounded-full inline-block">Cobrado (S/{cita.monto_cobrado})</span>
                       ) : (
@@ -156,10 +272,21 @@ export default function AgendaView({ citasRaw, sedes, userProfile, cargarDatos, 
                           {userProfile.tipo === "barbero" ? (
                             <button onClick={() => setCitaACobrar(cita)} className="text-white bg-black hover:bg-stone-800 px-6 py-2 rounded-lg text-xs font-bold transition-all shadow-sm">COBRAR</button>
                           ) : (
-                            <>
-                              <span className="text-amber-600 font-bold text-xs uppercase tracking-widest bg-amber-100 px-3 py-1.5 rounded-full inline-block">Pendiente</span>
-                              <button onClick={() => setCitaACancelar(cita.id)} className="text-red-500 hover:text-white border border-red-200 hover:border-red-500 hover:bg-red-500 px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow-sm">Cancelar ✕</button>
-                            </>
+                            <div className="flex flex-col gap-2 items-center w-full">
+                              {isYapePorVerificar && (
+                                <span className="text-[10px] bg-amber-100 text-amber-700 font-bold px-3 py-1.5 rounded border border-amber-300 animate-pulse w-full">
+                                  🔔 ¡Revisar Yape! S/ {Number(cita.monto_total).toFixed(2)}
+                                </span>
+                              )}
+                              <div className="flex gap-2 justify-center w-full">
+                                <button onClick={() => abrirModalVerificacion(cita)} className="flex-1 text-emerald-700 hover:text-white border border-emerald-300 hover:border-emerald-500 hover:bg-emerald-500 px-2 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all shadow-sm">
+                                  Verificar ✓
+                                </button>
+                                <button onClick={() => setCitaACancelar(cita.id)} className="flex-1 text-red-500 hover:text-white border border-red-200 hover:border-red-500 hover:bg-red-500 px-2 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all shadow-sm">
+                                  Cancelar ✕
+                                </button>
+                              </div>
+                            </div>
                           )}
                         </div>
                       )}
