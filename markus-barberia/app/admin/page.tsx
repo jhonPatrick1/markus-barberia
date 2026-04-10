@@ -87,6 +87,8 @@ export default function AdminDashboard() {
     const { data: dataSedes } = await supabase.from('sedes').select('*');
     if (dataSedes) setSedes(dataSedes);
 
+    
+
     // 1. Preparamos el query
     let query = supabase
       .from('citas')

@@ -31,7 +31,9 @@ export default function FinanceView({ citasRaw, sedes, userProfile }: any) {
   });
 
   const citasDelPeriodo = citasFiltradasSede.filter((cita: any) => {
-    const fechaCita = getLocalYYYYMMDD(new Date(cita.fecha_hora));
+    if (!cita.fecha_hora) return false;
+    const safeDateStr = cita.fecha_hora.replace(' ', 'T');
+    const fechaCita = getLocalYYYYMMDD(new Date(safeDateStr));
     if (rangoTiempo === 'dia') {
       return fechaCita === fechaSeleccionada;
     } else {
@@ -52,14 +54,17 @@ export default function FinanceView({ citasRaw, sedes, userProfile }: any) {
   }, {});
 
   const rankingBarberosObj = citasCompletadas.reduce((acc: Record<string, number>, cita: any) => {
-    const barbero = cita.barbero?.nombre || 'Desconocido';
+    // 👇 EXTRACCIÓN DEFENSIVA PARA EL BARBERO 👇
+    const nombreBarbero = Array.isArray(cita.barbero) ? cita.barbero[0]?.nombre : cita.barbero?.nombre;
+    const barbero = nombreBarbero || 'Desconocido';
     acc[barbero] = (acc[barbero] || 0) + Number(cita.monto_cobrado || 0);
     return acc;
   }, {});
   
-  // 👇 NUEVA FUNCIÓN: Agrupar ingresos por Sede 👇
   const ingresosPorSedeObj = citasCompletadas.reduce((acc: Record<string, number>, cita: any) => {
-    const sede = cita.sede?.nombre || 'Sede Desconocida';
+    // 👇 EXTRACCIÓN DEFENSIVA PARA LA SEDE 👇
+    const nombreSede = Array.isArray(cita.sede) ? cita.sede[0]?.nombre : cita.sede?.nombre;
+    const sede = nombreSede || 'Sede Desconocida';
     acc[sede] = (acc[sede] || 0) + Number(cita.monto_cobrado || 0);
     return acc;
   }, {});
@@ -68,7 +73,6 @@ export default function FinanceView({ citasRaw, sedes, userProfile }: any) {
   const rankingArray = Object.entries(rankingBarberosObj) as [string, number][];
   const barberosOrdenados = rankingArray.sort((a, b) => b[1] - a[1]);
   
-  // Convertimos a array y ordenamos las sedes de mayor a menor ingreso
   const sedesArray = Object.entries(ingresosPorSedeObj) as [string, number][];
   const sedesOrdenadas = sedesArray.sort((a, b) => b[1] - a[1]);
 
@@ -82,12 +86,18 @@ export default function FinanceView({ citasRaw, sedes, userProfile }: any) {
     const encabezados = ["Fecha", "Hora", "Cliente", "Sede", "Barbero", "Monto Cobrado (S/)", "Metodo de Pago"];
     
     const filas = citasCompletadas.map((cita: any) => {
-      const fechaObj = new Date(cita.fecha_hora);
+      const safeDateStr = cita.fecha_hora ? cita.fecha_hora.replace(' ', 'T') : '';
+      const fechaObj = new Date(safeDateStr);
       const fecha = fechaObj.toLocaleDateString();
       const hora = fechaObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       const cliente = `"${cita.cliente_nombre} ${cita.cliente_apellido}"`;
-      const sede = `"${cita.sede?.nombre || 'N/A'}"`;
-      const barbero = `"${cita.barbero?.nombre || 'N/A'}"`;
+      
+      const nombreSede = Array.isArray(cita.sede) ? cita.sede[0]?.nombre : cita.sede?.nombre;
+      const sede = `"${nombreSede || 'N/A'}"`;
+      
+      const nombreBarbero = Array.isArray(cita.barbero) ? cita.barbero[0]?.nombre : cita.barbero?.nombre;
+      const barbero = `"${nombreBarbero || 'N/A'}"`;
+      
       const monto = cita.monto_cobrado || 0;
       const metodo = cita.metodo_pago || 'N/A';
       
@@ -106,7 +116,6 @@ export default function FinanceView({ citasRaw, sedes, userProfile }: any) {
     document.body.removeChild(link);
   };
 
-  // Lógica para mostrar la tarjeta de sedes (Solo Master y si el filtro es "todas")
   const mostrarIngresosSede = userProfile.tipo === "master" && filtroSedeMaster === "todas";
 
   return (
@@ -176,7 +185,6 @@ export default function FinanceView({ citasRaw, sedes, userProfile }: any) {
       </div>
 
       {/* TABLAS FINANCIERAS Y RANKINGS */}
-      {/* NUEVO GRID: Acomodado para 2 o 3 columnas */}
       <div className={`grid grid-cols-1 ${mostrarIngresosSede ? 'lg:grid-cols-3' : 'md:grid-cols-2'} gap-6`}>
         
         {/* Recaudación por Método */}
@@ -222,7 +230,7 @@ export default function FinanceView({ citasRaw, sedes, userProfile }: any) {
           )}
         </div>
 
-        {/* NUEVA TARJETA: Ingresos por Sede (Renderizado condicional) */}
+        {/* Ingresos por Sede (Master) */}
         {mostrarIngresosSede && (
           <div className="bg-white p-6 rounded-xl border border-stone-200 shadow-sm animate-fade-in">
             <div className="flex items-center gap-3 mb-4 border-b border-stone-100 pb-2">

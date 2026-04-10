@@ -27,17 +27,12 @@ export default function AgendaView({ citasRaw, sedes, userProfile, cargarDatos, 
   const [fechaSeleccionada, setFechaSeleccionada] = useState<string>(getLocalYYYYMMDD(new Date()));
 
   // === LÓGICA DE BASE DE DATOS ===
-  // 👇 AQUÍ ESTÁ LA MAGIA FINANCIERA ACTUALIZADA 👇
   const procesarCobro = async (citaId: number, montoEntregadoHoy: number, metodo: string) => {
     try {
-      // 1. Buscamos la cita para saber cuánto dejó de adelanto previamente
       const citaActual = citasRaw.find((c: any) => c.id === citaId);
       const adelantoPrevio = Number(citaActual?.monto_adelantado || 0);
-      
-      // 2. Sumamos el adelanto + lo que el barbero cobra ahorita
       const montoTotalReal = adelantoPrevio + montoEntregadoHoy;
 
-      // 3. Guardamos el MONTO TOTAL en la caja para que finanzas cuadre
       const { error } = await supabase.from('citas').update({ 
         estado: 'completada', 
         monto_cobrado: montoTotalReal, 
@@ -108,12 +103,13 @@ export default function AgendaView({ citasRaw, sedes, userProfile, cargarDatos, 
     if (userProfile.tipo === "master" && filtroSedeMaster !== "todas") return c.sede_id?.toString() === filtroSedeMaster;
     return true;
   });
+  
   const citasDelDia = citasFiltradas.filter((cita: any) => {
     if (!cita.fecha_hora) return false;
-    // 🔥 FIX TIMEZONE: Reemplazamos el espacio por la 'T' estándar
     const safeDateStr = cita.fecha_hora.replace(' ', 'T');
     return getLocalYYYYMMDD(new Date(safeDateStr)) === fechaSeleccionada;
   });
+  
   const isBarbero = userProfile.tipo === "barbero";
 
   return (
@@ -210,12 +206,30 @@ export default function AgendaView({ citasRaw, sedes, userProfile, cargarDatos, 
             </thead>
             <tbody className="divide-y divide-stone-100">
               {citasDelDia.map((cita: any) => {
-                const safeDateStr = cita.fecha_hora.replace(' ', 'T');
-                const fechaLocal = new Date(cita.fecha_hora);
+                const safeDateStr = cita.fecha_hora ? cita.fecha_hora.replace(' ', 'T') : '';
+                const fechaLocal = new Date(safeDateStr);
                 const isAdelantado = cita.estado_pago === 'adelantado';
                 const isPagado = cita.estado_pago === 'pagado';
                 const isYapePorVerificar = cita.metodo_pago === 'Yape Anticipado' && cita.estado_pago === 'pendiente';
                 
+                // 👇 EXTRACCIÓN DEFENSIVA: Leemos bien aunque Supabase devuelva Objeto o Arreglo 👇
+                const nombreBarbero = Array.isArray(cita.barbero) ? cita.barbero[0]?.nombre : cita.barbero?.nombre;
+                const nombreSede = Array.isArray(cita.sede) ? cita.sede[0]?.nombre : cita.sede?.nombre;
+                
+                // Mapeamos los servicios de forma segura
+                const listaServiciosRaw = Array.isArray(cita.cita_servicios) ? cita.cita_servicios : [];
+                let sumaServicios = 0;
+                
+                const listaServiciosFormateada = listaServiciosRaw.map((relacion: any) => {
+                   const infoSrv = Array.isArray(relacion.servicios) ? relacion.servicios[0] : relacion.servicios;
+                   const nombre = infoSrv?.nombre || 'Servicio sin nombre';
+                   const precio = Number(infoSrv?.precio || 0);
+                   sumaServicios += precio;
+                   return { nombre, precio };
+                });
+
+                const totalACobrarFinal = Number(cita.monto_total || sumaServicios);
+
                 return (
                   <tr key={cita.id} className={`transition-colors ${cita.estado === 'completada' ? 'bg-emerald-50/30' : 'hover:bg-stone-50'}`}>
                     <td className="p-4 align-top"><div className="font-bold text-black mt-1">{fechaLocal.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div></td>
@@ -228,9 +242,9 @@ export default function AgendaView({ citasRaw, sedes, userProfile, cargarDatos, 
                         
                         {/* Etiquetas de Barbero y Sede */}
                         <div className="flex gap-2 flex-wrap">
-                          <span className="bg-stone-100 px-2 py-1 rounded border border-stone-200 text-[11px] font-bold text-stone-700">✂️ {cita.barbero?.nombre}</span>
+                          <span className="bg-stone-100 px-2 py-1 rounded border border-stone-200 text-[11px] font-bold text-stone-700">✂️ {nombreBarbero || 'Sin asignar'}</span>
                           {userProfile.tipo === "master" && (
-                            <span className="bg-blue-50 px-2 py-1 rounded border border-blue-100 text-[11px] font-bold text-blue-700">📍 {cita.sede?.nombre}</span>
+                            <span className="bg-blue-50 px-2 py-1 rounded border border-blue-100 text-[11px] font-bold text-blue-700">📍 {nombreSede || 'Sede'}</span>
                           )}
                         </div>
 
@@ -238,11 +252,11 @@ export default function AgendaView({ citasRaw, sedes, userProfile, cargarDatos, 
                         <div className="w-full bg-stone-50 border border-stone-200 rounded-lg p-3 mt-1">
                           <p className="text-[10px] uppercase tracking-widest text-stone-500 font-bold mb-2">Servicios Solicitados:</p>
                           <ul className="text-xs text-stone-700 space-y-1 mb-3">
-                            {cita.cita_servicios && cita.cita_servicios.length > 0 ? (
-                              cita.cita_servicios.map((relacion: any, idx: number) => (
+                            {listaServiciosFormateada.length > 0 ? (
+                              listaServiciosFormateada.map((srv: any, idx: number) => (
                                 <li key={idx} className="flex justify-between items-center">
-                                  <span className="truncate pr-2">• {relacion.servicios?.nombre || 'Servicio'}</span>
-                                  <span className="text-stone-500 font-medium whitespace-nowrap">S/ {relacion.servicios?.precio || '0'}</span>
+                                  <span className="truncate pr-2">• {srv.nombre}</span>
+                                  <span className="text-stone-500 font-medium whitespace-nowrap">S/ {srv.precio.toFixed(2)}</span>
                                 </li>
                               ))
                             ) : (
@@ -252,7 +266,7 @@ export default function AgendaView({ citasRaw, sedes, userProfile, cargarDatos, 
                           
                           <div className="border-t border-stone-200 pt-2 flex justify-between items-center">
                             <span className="text-[10px] uppercase tracking-widest text-stone-500 font-bold">Total a Cobrar</span>
-                            <span className="text-sm font-bold text-[#B07D54]">S/ {Number(cita.monto_total || 0).toFixed(2)}</span>
+                            <span className="text-sm font-bold text-[#B07D54]">S/ {totalACobrarFinal.toFixed(2)}</span>
                           </div>
                         </div>
 
@@ -280,7 +294,7 @@ export default function AgendaView({ citasRaw, sedes, userProfile, cargarDatos, 
                             <div className="flex flex-col gap-2 items-center w-full">
                               {isYapePorVerificar && (
                                 <span className="text-[10px] bg-amber-100 text-amber-700 font-bold px-3 py-1.5 rounded border border-amber-300 animate-pulse w-full">
-                                  🔔 ¡Revisar Yape! S/ {Number(cita.monto_total).toFixed(2)}
+                                  🔔 ¡Revisar Yape! S/ {totalACobrarFinal.toFixed(2)}
                                 </span>
                               )}
                               <div className="flex gap-2 justify-center w-full">
