@@ -48,8 +48,20 @@ export default function FinanceView({ citasRaw, sedes, userProfile }: any) {
   const pendientes = citasDelPeriodo.filter((c: any) => c.estado !== 'completada').length;
 
   const ingresosPorMetodoObj = citasCompletadas.reduce((acc: Record<string, number>, cita: any) => {
-    const metodo = cita.metodo_pago || 'No especificado';
-    acc[metodo] = (acc[metodo] || 0) + Number(cita.monto_cobrado || 0);
+    const totalCobrado = Number(cita.monto_cobrado || 0);
+    const adelanto = Number(cita.monto_adelantado || 0);
+    
+    // Calculamos el restante (Efectivo), asegurando que no sea negativo
+    const restanteEfectivo = Math.max(0, totalCobrado - adelanto);
+
+    if (adelanto > 0) {
+      acc['Yape'] = (acc['Yape'] || 0) + adelanto;
+    }
+    
+    if (restanteEfectivo > 0) {
+      acc['Efectivo'] = (acc['Efectivo'] || 0) + restanteEfectivo;
+    }
+
     return acc;
   }, {});
 
