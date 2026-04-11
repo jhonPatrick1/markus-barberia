@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabase";
 import ChargeModal from "./ChargeModal";
 
@@ -26,6 +26,31 @@ export default function AgendaView({ citasRaw, sedes, userProfile, cargarDatos, 
     return `${year}-${month}-${day}`;
   };
   const [fechaSeleccionada, setFechaSeleccionada] = useState<string>(getLocalYYYYMMDD(new Date()));
+
+  // 🔥 === MOTOR SUPABASE REALTIME === 🔥
+  useEffect(() => {
+    const canalCitas = supabase
+      .channel('escuchando-citas')
+      .on(
+        'postgres_changes',
+        { 
+          event: '*', // Escucha TODO: INSERT, UPDATE, DELETE
+          schema: 'public', 
+          table: 'citas' 
+        },
+        (payload) => {
+          console.log('¡Cambio detectado por Supabase Realtime!', payload);
+          // Si alguien reserva o paga, recargamos la data automáticamente
+          cargarDatos(); 
+        }
+      )
+      .subscribe();
+
+    // Limpiamos el canal al desmontar para no gastar memoria
+    return () => {
+      supabase.removeChannel(canalCitas);
+    };
+  }, [cargarDatos]);
 
   // === LÓGICA DE BASE DE DATOS ===
   const procesarCobro = async (citaId: number, montoEntregadoHoy: number, metodo: string) => {
@@ -220,8 +245,8 @@ export default function AgendaView({ citasRaw, sedes, userProfile, cargarDatos, 
              <p className="text-stone-500 text-sm mt-1 font-medium">Mi Agenda Personal</p>
            </div>
            <div className="flex gap-3">
-             <button onClick={cargarDatos} className="text-stone-500 hover:text-black font-medium text-sm px-4 py-2 border border-stone-200 rounded-lg">🔄 Refrescar</button>
-             <button onClick={onLogout} className="text-stone-500 hover:text-red-600 font-medium text-sm px-4 py-2 border border-stone-200 rounded-lg">Cerrar Sesión</button>
+             <button onClick={cargarDatos} className="text-stone-500 hover:text-black font-medium text-sm px-4 py-2 border border-stone-200 rounded-lg whitespace-nowrap">🔄 Refrescar</button>
+             <button onClick={onLogout} className="text-stone-500 hover:text-red-600 font-medium text-sm px-4 py-2 border border-stone-200 rounded-lg whitespace-nowrap">Cerrar Sesión</button>
            </div>
          </div>
       )}
@@ -229,18 +254,18 @@ export default function AgendaView({ citasRaw, sedes, userProfile, cargarDatos, 
       {/* CONTROLES DE FECHA */}
       <div className="bg-white p-4 rounded-xl shadow-sm border border-stone-200 flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-2">
-          <button onClick={() => cambiarDia(-1)} className="px-4 py-2 border border-stone-200 rounded-lg text-sm font-medium hover:bg-stone-50">◀ Anterior</button>
-          <button onClick={irAHoy} className="px-4 py-2 bg-black text-white rounded-lg text-sm font-bold">Hoy</button>
-          <button onClick={() => cambiarDia(1)} className="px-4 py-2 border border-stone-200 rounded-lg text-sm font-medium hover:bg-stone-50">Siguiente ▶</button>
+          <button onClick={() => cambiarDia(-1)} className="px-4 py-2 border border-stone-200 rounded-lg text-sm font-medium hover:bg-stone-50 whitespace-nowrap">◀ Anterior</button>
+          <button onClick={irAHoy} className="px-4 py-2 bg-black text-white rounded-lg text-sm font-bold whitespace-nowrap">Hoy</button>
+          <button onClick={() => cambiarDia(1)} className="px-4 py-2 border border-stone-200 rounded-lg text-sm font-medium hover:bg-stone-50 whitespace-nowrap">Siguiente ▶</button>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center gap-4 w-full md:w-auto">
           {userProfile.tipo === "master" && (
-            <select aria-label="Filtro Sede" value={filtroSedeMaster} onChange={(e) => setFiltroSedeMaster(e.target.value)} className="border-2 border-stone-200 rounded-lg p-2 text-sm outline-none cursor-pointer bg-white">
+            <select aria-label="Filtro Sede" value={filtroSedeMaster} onChange={(e) => setFiltroSedeMaster(e.target.value)} className="border-2 border-stone-200 rounded-lg p-2 text-sm outline-none cursor-pointer bg-white w-full md:w-auto">
               <option value="todas">Todas las sedes</option>
               {sedes.map((sede: any) => <option key={sede.id} value={sede.id.toString()}>{sede.nombre}</option>)}
             </select>
           )}
-          <input aria-label="Fecha" type="date" value={fechaSeleccionada} onChange={(e) => setFechaSeleccionada(e.target.value)} className="border-2 border-stone-200 rounded-lg p-2 text-sm outline-none cursor-pointer"/>
+          <input aria-label="Fecha" type="date" value={fechaSeleccionada} onChange={(e) => setFechaSeleccionada(e.target.value)} className="border-2 border-stone-200 rounded-lg p-2 text-sm outline-none cursor-pointer w-full md:w-auto"/>
         </div>
       </div>
 
@@ -281,18 +306,18 @@ export default function AgendaView({ citasRaw, sedes, userProfile, cargarDatos, 
 
                 return (
                   <tr key={cita.id} className={`transition-colors ${cita.estado === 'completada' ? 'bg-emerald-50/30' : 'hover:bg-stone-50'}`}>
-                    <td className="p-4 align-top"><div className="font-bold text-black mt-1">{fechaLocal.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div></td>
+                    <td className="p-4 align-top"><div className="font-bold text-black mt-1 whitespace-nowrap">{fechaLocal.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div></td>
                     <td className="p-4 align-top">
-                      <div className="font-bold text-sm text-stone-900 mt-1">{cita.cliente_nombre} {cita.cliente_apellido}</div>
-                      <div className="text-xs text-stone-500 mt-0.5">{cita.cliente_celular}</div>
+                      <div className="font-bold text-sm text-stone-900 mt-1 whitespace-nowrap">{cita.cliente_nombre} {cita.cliente_apellido}</div>
+                      <div className="text-xs text-stone-500 mt-0.5 whitespace-nowrap">{cita.cliente_celular}</div>
                     </td>
                     <td className="p-4 align-top">
                       <div className="flex flex-col gap-2 items-start w-full max-w-xs">
                         
                         <div className="flex gap-2 flex-wrap">
-                          <span className="bg-stone-100 px-2 py-1 rounded border border-stone-200 text-[11px] font-bold text-stone-700">✂️ {nombreBarbero || 'Sin asignar'}</span>
+                          <span className="bg-stone-100 px-2 py-1 rounded border border-stone-200 text-[11px] font-bold text-stone-700 whitespace-nowrap">✂️ {nombreBarbero || 'Sin asignar'}</span>
                           {userProfile.tipo === "master" && (
-                            <span className="bg-blue-50 px-2 py-1 rounded border border-blue-100 text-[11px] font-bold text-blue-700">📍 {nombreSede || 'Sede'}</span>
+                            <span className="bg-blue-50 px-2 py-1 rounded border border-blue-100 text-[11px] font-bold text-blue-700 whitespace-nowrap">📍 {nombreSede || 'Sede'}</span>
                           )}
                         </div>
 
@@ -312,18 +337,18 @@ export default function AgendaView({ citasRaw, sedes, userProfile, cargarDatos, 
                           </ul>
                           
                           <div className="border-t border-stone-200 pt-2 flex justify-between items-center">
-                            <span className="text-[10px] uppercase tracking-widest text-stone-500 font-bold">Total a Cobrar</span>
-                            <span className="text-sm font-bold text-[#B07D54]">S/ {totalACobrarFinal.toFixed(2)}</span>
+                            <span className="text-[10px] uppercase tracking-widest text-stone-500 font-bold whitespace-nowrap">Total a Cobrar</span>
+                            <span className="text-sm font-bold text-[#B07D54] whitespace-nowrap">S/ {totalACobrarFinal.toFixed(2)}</span>
                           </div>
                         </div>
 
                         {isAdelantado && (
-                          <span className="bg-emerald-50 text-emerald-700 px-2 py-1 rounded text-[10px] font-bold uppercase tracking-widest border border-emerald-200 w-full text-center">
+                          <span className="bg-emerald-50 text-emerald-700 px-2 py-1 rounded text-[10px] font-bold uppercase tracking-widest border border-emerald-200 w-full text-center whitespace-nowrap">
                             Adelanto Pagado: S/ {Number(cita.monto_adelantado).toFixed(2)}
                           </span>
                         )}
                         {isPagado && (
-                          <span className="bg-emerald-500 text-white px-2 py-1 rounded text-[10px] font-bold uppercase tracking-widest w-full text-center">
+                          <span className="bg-emerald-500 text-white px-2 py-1 rounded text-[10px] font-bold uppercase tracking-widest w-full text-center whitespace-nowrap">
                             Pago Completo 100%
                           </span>
                         )}
@@ -331,7 +356,7 @@ export default function AgendaView({ citasRaw, sedes, userProfile, cargarDatos, 
                     </td>
                     <td className="p-4 text-center align-top pt-5">
                       {cita.estado === 'completada' ? (
-                        <span className="text-emerald-600 font-bold text-xs uppercase tracking-widest bg-emerald-100 px-3 py-1.5 rounded-full inline-block">Cobrado (S/{cita.monto_cobrado})</span>
+                        <span className="text-emerald-600 font-bold text-xs uppercase tracking-widest bg-emerald-100 px-3 py-1.5 rounded-full inline-block whitespace-nowrap">Cobrado (S/{cita.monto_cobrado})</span>
                       ) : (
                         <div className="flex justify-center gap-2 items-center">
                           {userProfile.tipo === "barbero" ? (
@@ -344,7 +369,7 @@ export default function AgendaView({ citasRaw, sedes, userProfile, cargarDatos, 
                                 return (
                                   <button 
                                     onClick={() => setCitaAFinalizar(cita)}
-                                    className="text-emerald-700 bg-emerald-100 border border-emerald-400 hover:bg-emerald-500 hover:text-white w-full py-2 rounded-lg text-[11px] font-bold transition-all shadow-sm uppercase tracking-widest"
+                                    className="text-emerald-700 bg-emerald-100 border border-emerald-400 hover:bg-emerald-500 hover:text-white w-full py-2 rounded-lg text-[11px] font-bold transition-all shadow-sm uppercase tracking-widest whitespace-nowrap"
                                   >
                                     ✅ Finalizar Corte
                                   </button>
@@ -355,7 +380,7 @@ export default function AgendaView({ citasRaw, sedes, userProfile, cargarDatos, 
                                     onClick={() => setCitaACobrar(cita)} 
                                     className="text-white bg-black hover:bg-stone-800 whitespace-nowrap w-full py-2 rounded-lg text-[10px] font-bold transition-all shadow-sm uppercase tracking-widest"
                                   >
-                                    Cobrar Restante (S/ {faltaCobrar.toFixed(2)})
+                                    💰 Cobrar Restante (S/ {faltaCobrar.toFixed(2)})
                                   </button>
                                 );
                               }
@@ -364,7 +389,7 @@ export default function AgendaView({ citasRaw, sedes, userProfile, cargarDatos, 
                           ) : (
                             <div className="flex flex-col gap-2 items-center w-full">
                               {isYapePorVerificar && (
-                                <span className="text-[10px] bg-amber-100 text-amber-700 font-bold px-3 py-1.5 rounded border border-amber-300 animate-pulse w-full">
+                                <span className="text-[10px] bg-amber-100 text-amber-700 font-bold px-3 py-1.5 rounded border border-amber-300 animate-pulse w-full whitespace-nowrap">
                                   🔔 ¡Revisar Yape! S/ {totalACobrarFinal.toFixed(2)}
                                 </span>
                               )}
@@ -377,7 +402,7 @@ export default function AgendaView({ citasRaw, sedes, userProfile, cargarDatos, 
                                   return (
                                     <button 
                                       onClick={() => setCitaAFinalizar(cita)}
-                                      className="w-full text-emerald-700 hover:text-white border border-emerald-400 hover:bg-emerald-500 px-2 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all shadow-sm"
+                                      className="w-full text-emerald-700 hover:text-white border border-emerald-400 hover:bg-emerald-500 px-2 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all shadow-sm whitespace-nowrap"
                                     >
                                       ✅ Forzar Cierre (Pagado)
                                     </button>
@@ -386,7 +411,7 @@ export default function AgendaView({ citasRaw, sedes, userProfile, cargarDatos, 
                                   return (
                                     <button 
                                       onClick={() => setCitaACobrar(cita)} 
-                                      className="w-full text-stone-700 hover:text-white border border-stone-400 hover:bg-stone-800 px-2 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all shadow-sm"
+                                      className="w-full text-stone-700 hover:text-white border border-stone-400 hover:bg-stone-800 px-2 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all shadow-sm whitespace-nowrap"
                                     >
                                       💰 Cobrar en Caja (S/ {faltaCobrar.toFixed(2)})
                                     </button>
@@ -395,10 +420,10 @@ export default function AgendaView({ citasRaw, sedes, userProfile, cargarDatos, 
                               })()}
 
                               <div className="flex gap-2 justify-center w-full">
-                                <button onClick={() => abrirModalVerificacion(cita)} className="flex-1 text-emerald-700 hover:text-white border border-emerald-300 hover:border-emerald-500 hover:bg-emerald-500 px-2 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all shadow-sm">
+                                <button onClick={() => abrirModalVerificacion(cita)} className="flex-1 text-emerald-700 hover:text-white border border-emerald-300 hover:border-emerald-500 hover:bg-emerald-500 px-2 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all shadow-sm whitespace-nowrap">
                                   Verificar ✓
                                 </button>
-                                <button onClick={() => setCitaACancelar(cita.id)} className="flex-1 text-red-500 hover:text-white border border-red-200 hover:border-red-500 hover:bg-red-500 px-2 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all shadow-sm">
+                                <button onClick={() => setCitaACancelar(cita.id)} className="flex-1 text-red-500 hover:text-white border border-red-200 hover:border-red-500 hover:bg-red-500 px-2 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all shadow-sm whitespace-nowrap">
                                   Cancelar ✕
                                 </button>
                               </div>
