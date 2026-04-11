@@ -4,11 +4,11 @@ export default function GoogleReviews() {
   // Añadí una sexta reseña para que el bucle se vea súper fluido y lleno
   const reviews = [
     {
-      name: "Sebastian GUTIERREZ",
-      time: "hace 9 meses",
-      text: "Una experiencia única que me lleve, me asesoraron antes de cortarme y la atención A1 ✂️💈",
+      name: "Jhon Cali",
+      time: "hace 2 días",
+      text: "El sistema para agendar es súper rápido y la atención en la barbería es de otro nivel. El mejor corte que me he hecho. Recomendado al 100% 🚀💈",
       stars: 5,
-      initial: "S"
+      initial: "J"
     },
     {
       name: "Gian Carlos Rodas",

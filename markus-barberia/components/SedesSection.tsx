@@ -3,10 +3,26 @@
 import Link from "next/link";
 import Image from "next/image";
 
+// 👇 AQUÍ ESTÁN LAS SEDES CON SU NUEVO COPYWRITING PREMIUM 👇
 const sedesEstaticas = [
-  { slug: "cercado-de-lima", nombre: "Cercado de Lima", img: "/sede-cercado.jpg" },
-  { slug: "pueblo-libre", nombre: "Pueblo Libre", img: "/sede-pueblo.jpg" },
-  { slug: "magdalena-del-mar", nombre: "Magdalena del Mar", img: "/sede-magdalena.jpg" }
+  { 
+    slug: "cercado-de-lima", 
+    nombre: "Cercado de Lima", 
+    img: "/cercado.png",
+    desc: "Tradición y estilo en el corazón de la ciudad. El verdadero estándar premium donde inició nuestra leyenda."
+  },
+  { 
+    slug: "pueblo-libre", 
+    nombre: "Pueblo Libre", 
+    img: "/pueblo.png",
+    desc: "Elegancia y confort en un ambiente exclusivo. Tu escape perfecto para desconectar y renovar tu imagen."
+  },
+  { 
+    slug: "magdalena-del-mar", 
+    nombre: "Magdalena del Mar", 
+    img: "/magdalena.png",
+    desc: "Vanguardia y sofisticación. Instalaciones de primer nivel diseñadas para el hombre moderno y exigente."
+  }
 ];
 
 export default function SedesSection() {
@@ -33,8 +49,13 @@ export default function SedesSection() {
             >
               {/* Imagen de la Sede: Más panorámica en móvil (aspect-video) y original en PC (md:aspect-[4/3]) */}
               <div className="w-full aspect-video md:aspect-[4/3] relative overflow-hidden bg-stone-900">
+                {/* 👇 COMPONENTE IMAGE BLINDADO 👇 */}
                 <Image 
-                  src={sede.img} 
+                  src={
+                    sede.img 
+                      ? (sede.img.startsWith('http') || sede.img.startsWith('/') ? sede.img : `/${sede.img}`)
+                      : '/qr-default.png'
+                  } 
                   alt={`Sede ${sede.nombre}`}
                   fill
                   className="object-cover grayscale group-hover:grayscale-0 transition-all duration-700 group-hover:scale-105"
@@ -48,8 +69,10 @@ export default function SedesSection() {
 
               {/* Contenido y Botón: Padding reducido en móvil (p-5 en lugar de p-8) */}
               <div className="p-5 md:p-8 flex flex-col gap-4 md:gap-6 flex-1 justify-between">
-                <p className="text-stone-400 text-xs sm:text-sm font-light leading-relaxed">
-                  Vive la experiencia Markus en nuestras instalaciones premium en {sede.nombre}.
+                
+                {/* 👇 TEXTO DINÁMICO Y ALTURA UNIFORME 👇 */}
+                <p className="text-stone-400 text-xs sm:text-sm font-light leading-relaxed min-h-[60px]">
+                  {sede.desc}
                 </p>
                 
                 <Link 

@@ -50,14 +50,14 @@ export default function Footer() {
                 </a>
               </li>
               <li className="flex items-center gap-3 justify-center md:justify-start">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="opacity-60">
+                {/*<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="opacity-60">
                   <circle cx="12" cy="12" r="10"></circle>
                   <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
                   <line x1="12" y1="17" x2="12.01" y2="17"></line>
                 </svg>
-                <Link href="/faq" className="hover:text-white transition-colors">
+                {/* <Link href="/faq" className="hover:text-white transition-colors">
                   Preguntas Frecuentes
-                </Link>
+                </Link> */}
               </li>
             </ul>
           </div>
