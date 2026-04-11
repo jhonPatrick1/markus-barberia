@@ -20,7 +20,7 @@ const raleway = Raleway({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://markus-barberia-7a4p.vercel.app/"),
+  metadataBase: new URL("https://markusbarberia.com/"),
   // === SEO BÁSICO Y PREMIUM ===
   title: "MARKUS Barbería | Corte Clásico y Estilo Premium",
   description: "Vive la experiencia MARKUS. Especialistas en barbería clásica, cortes modernos y perfilado de barba de alto nivel en Pueblo Libre, Cercado de Lima y Magdalena. Agenda tu cita online.",
@@ -39,7 +39,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Barbería Premium | Descubre Tu Mejor Versión y Estilo",
     description: "Reserva tu cita en segundos. Descubre la mejor experiencia de barbería premium en Lima con nuestros especialistas.",
-    url: "/", 
+    url: "https://markusbarberia.com/", 
     siteName: "MARKUS Barbería",
     images: [
       {
