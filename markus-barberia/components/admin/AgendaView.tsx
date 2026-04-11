@@ -245,17 +245,16 @@ export default function AgendaView({ citasRaw, sedes, userProfile, cargarDatos, 
       </div>
 
       {/* TABLA DE CITAS */}
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-stone-200">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-stone-100 text-stone-500 text-xs uppercase tracking-wider border-b border-stone-200">
-                <th className="p-4 font-bold">Hora</th>
-                <th className="p-4 font-bold">Cliente</th>
-                <th className="p-4 font-bold">Detalle y Servicios</th>
-                <th className="p-4 text-center font-bold">Estado / Acción</th>
-              </tr>
-            </thead>
+      <div className="bg-white rounded-xl shadow-sm border border-stone-200 overflow-x-auto w-full custom-scrollbar">
+        <table className="w-full min-w-[800px] text-left border-collapse">
+          <thead>
+            <tr className="bg-stone-100 text-stone-500 text-xs uppercase tracking-wider border-b border-stone-200">
+              <th className="p-4 font-bold">Hora</th>
+              <th className="p-4 font-bold">Cliente</th>
+              <th className="p-4 font-bold">Detalle y Servicios</th>
+              <th className="p-4 text-center font-bold">Estado / Acción</th>
+            </tr>
+          </thead>
             <tbody className="divide-y divide-stone-100">
               {citasDelDia.map((cita: any) => {
                 const safeDateStr = cita.fecha_hora ? cita.fecha_hora.replace(' ', 'T') : '';
@@ -354,7 +353,7 @@ export default function AgendaView({ citasRaw, sedes, userProfile, cargarDatos, 
                                 return (
                                   <button 
                                     onClick={() => setCitaACobrar(cita)} 
-                                    className="text-white bg-black hover:bg-stone-800 w-full py-2 rounded-lg text-[10px] font-bold transition-all shadow-sm uppercase tracking-widest"
+                                    className="text-white bg-black hover:bg-stone-800 whitespace-nowrap w-full py-2 rounded-lg text-[10px] font-bold transition-all shadow-sm uppercase tracking-widest"
                                   >
                                     Cobrar Restante (S/ {faltaCobrar.toFixed(2)})
                                   </button>
@@ -416,6 +415,5 @@ export default function AgendaView({ citasRaw, sedes, userProfile, cargarDatos, 
           </table>
         </div>
       </div>
-    </div>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "../lib/supabase"; 
 
 interface PreSelection {
@@ -46,6 +46,15 @@ export default function BookingModal({ isOpen, preSelection, onClose }: {
   });
 
   const [currentDate, setCurrentDate] = useState(new Date());
+  
+  // 👇 MOTOR DE AUTO-SCROLL AL TOPE 👇
+  const modalScrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (modalScrollRef.current) {
+      modalScrollRef.current.scrollTop = 0;
+    }
+  }, [step]);
 
   const today = new Date();
   today.setHours(0, 0, 0, 0); 
@@ -167,7 +176,6 @@ export default function BookingModal({ isOpen, preSelection, onClose }: {
 
         const nuevosSlots: SlotHorario[] = [];
         
-        // Obtenemos la hora actual en minutos para bloquear el pasado
         const now = new Date();
         const currentDateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
         const isToday = selection.fecha === currentDateStr;
@@ -176,19 +184,16 @@ export default function BookingModal({ isOpen, preSelection, onClose }: {
         for (let t = APERTURA; t < CIERRE; t += INTERVALO) {
           const tiempoFinEstimado = t + duracionRequerida;
 
-          // 🔥 LÓGICA 1: Viaje en el tiempo (Ocultar horas que ya pasaron HOY)
           if (isToday && t <= currentMinutes) {
              nuevosSlots.push({ horaTexto: minutosAHoraTexto(t), disponible: false });
              continue;
           }
 
-          // 🔥 LÓGICA 2: Bloqueo de duración contigua (Si la cita dura 3 hrs, debe haber espacio suficiente antes del cierre)
           if (tiempoFinEstimado > CIERRE) {
             nuevosSlots.push({ horaTexto: minutosAHoraTexto(t), disponible: false });
             continue;
           }
 
-          // 🔥 LÓGICA 3: Choque de citas intermedias (Si hay una cita metida entre el inicio y el fin de nuestras 3 hrs)
           const choca = rangosOcupados.some(rango => {
             return (t < rango.fin) && (tiempoFinEstimado > rango.inicio);
           });
@@ -436,7 +441,8 @@ export default function BookingModal({ isOpen, preSelection, onClose }: {
 
         <div className="flex-1 flex flex-col overflow-hidden relative">
           
-          <div className={`flex-1 overflow-y-auto overscroll-contain p-6 md:p-10 custom-scrollbar ${step === 7 ? 'flex items-center justify-center py-16' : ''}`}>
+          {/* 👇 AQUÍ ENGANCHAMOS EL MOTOR DE AUTO-SCROLL AL DIV PRINCIPAL 👇 */}
+          <div ref={modalScrollRef} className={`flex-1 overflow-y-auto overscroll-contain p-6 md:p-10 custom-scrollbar ${step === 7 ? 'flex items-center justify-center py-16' : ''}`}>
             {isLoadingData ? (
               <div className="flex-1 flex items-center justify-center h-full">
                 <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#B07D54]"></div>
@@ -571,10 +577,14 @@ export default function BookingModal({ isOpen, preSelection, onClose }: {
                     <div className="flex flex-col md:flex-row gap-8 items-start">
                       <div className="flex-1 w-full bg-[#1A1A1A] p-6 rounded-2xl border border-stone-800">
                         
+                        {/* 👇 AQUI ESTÁN LOS BOTONES CORREGIDOS CON ARIA-LABEL Y TITLE 👇 */}
                         <div className="flex items-center justify-between mb-6 border-b border-stone-800 pb-4">
+                          
+                          {/* BOTÓN MES ANTERIOR */}
                           <button 
                             type="button" 
                             aria-label="Mes anterior"
+                            title="Mes anterior"
                             onClick={handlePrevMonth} 
                             disabled={isCurrentMonth}
                             className={`p-2 rounded-full transition-colors ${isCurrentMonth ? 'text-stone-700 cursor-not-allowed' : 'text-[#B07D54] hover:bg-[#B07D54]/10'}`}
@@ -586,9 +596,11 @@ export default function BookingModal({ isOpen, preSelection, onClose }: {
                             {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
                           </span>
 
+                          {/* BOTÓN MES SIGUIENTE */}
                           <button 
                             type="button" 
                             aria-label="Mes siguiente"
+                            title="Mes siguiente"
                             onClick={handleNextMonth} 
                             className="p-2 rounded-full text-[#B07D54] hover:bg-[#B07D54]/10 transition-colors"
                           >
@@ -628,6 +640,15 @@ export default function BookingModal({ isOpen, preSelection, onClose }: {
                         </div>
                       </div>
                       
+                      {/* 🔥 MAGIA UX: LA FLECHITA REBOTANDO Y TEXTO MEJORADO 🔥 */}
+                      <div className="md:hidden flex flex-col items-center justify-center pt-2 pb-6 animate-bounce text-[#B07D54] w-full border-t border-stone-800/50 mt-4">
+                        <span className="text-[10px] uppercase tracking-widest font-bold mb-2">Desliza para ver horarios</span>
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <line x1="12" y1="5" x2="12" y2="19"></line>
+                          <polyline points="19 12 12 19 5 12"></polyline>
+                        </svg>
+                      </div>
+
                       <div className="flex-1 w-full flex flex-col">
                          <div className="mb-4">
                            <div className="text-[10px] text-stone-500 uppercase tracking-widest">Disponibilidad</div>
@@ -889,7 +910,7 @@ export default function BookingModal({ isOpen, preSelection, onClose }: {
                   disabled={!selection.nombre || !selection.apellido || !selection.celular}
                   className="bg-[#B07D54] text-[#161616] px-8 py-3 rounded-full font-bold text-xs uppercase tracking-widest hover:bg-[#c48e62] transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_15px_rgba(176,125,84,0.3)]"
                  >
-                   Continuar al Pago
+                   Continuar
                  </button>
               )}
             </div>
