@@ -143,15 +143,19 @@ export default function SedeDetalle() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
             {barberosFiltrados.map((barbero) => (
               <div key={barbero.id} className="bg-[#161616] border border-stone-800 p-6 rounded-3xl flex flex-col items-center hover:border-stone-600 transition-colors shadow-lg">
-                <div className="w-32 h-32 md:w-40 md:h-40 rounded-full overflow-hidden mb-6 border-2 border-stone-800">
-                  <Image 
-                    src={barbero.img} 
-                    alt={barbero.nombre}
-                    width={160}
-                    height={160}
-                    className="object-cover w-full h-full grayscale hover:grayscale-0 transition-all duration-500"
-                  />
-                </div>
+                <div className="w-32 h-32 md:w-40 md:h-40 rounded-full overflow-hidden mb-6 border-2 border-stone-800 flex items-center justify-center bg-[#101010] shadow-inner">
+                 {barbero.foto_url ? (
+                 <img 
+                 src={barbero.foto_url} 
+                 alt={barbero.nombre} 
+                 className="object-cover w-full h-full grayscale hover:grayscale-0 transition-all duration-500"
+                 />
+                 ) : (
+               <span className="text-6xl md:text-7xl font-serif text-[#B07D54]">
+               {barbero.nombre.charAt(0).toUpperCase()}
+                 </span>
+                 )}
+                 </div>
                 <div className="text-center w-full mb-8">
                   <h3 className="font-serif text-2xl text-white uppercase tracking-widest mb-1">{barbero.nombre}</h3>
                   <p className="text-stone-500 text-[10px] uppercase tracking-widest mb-3">{barbero.role}</p>

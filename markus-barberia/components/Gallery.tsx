@@ -45,7 +45,7 @@ export default function Gallery() {
               </p>
             </div>
             {/* Link en Cobre/Blanco */}
-            <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="text-[#B07D54] text-[10px] md:text-xs font-bold tracking-widest uppercase hover:text-white transition-colors mt-6 md:mt-0 flex items-center gap-2 group">
+            <a href="https://www.instagram.com/markus_barberia/" target="_blank" rel="noopener noreferrer" className="text-[#B07D54] text-[10px] md:text-xs font-bold tracking-widest uppercase hover:text-white transition-colors mt-6 md:mt-0 flex items-center gap-2 group">
               Ver más en Instagram 
               <svg className="transition-transform group-hover:translate-x-1 group-hover:-translate-y-1" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="7" y1="17" x2="17" y2="7"></line><polyline points="7 7 17 7 17 17"></polyline></svg>
             </a>

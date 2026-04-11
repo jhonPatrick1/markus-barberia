@@ -46,7 +46,7 @@ export default function Footer() {
                   <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path>
                 </svg>
                 <a href="mailto:contacto@markusbarberia.com" className="hover:text-white transition-colors">
-                  contacto@markusbarberia.com
+                  markusbarberiaperu@gmail.com
                 </a>
               </li>
               <li className="flex items-center gap-3 justify-center md:justify-start">
@@ -69,7 +69,7 @@ export default function Footer() {
             </h3>
             <div className="flex items-center gap-6 text-zinc-400">
               {/* Instagram SVG */}
-              <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors" aria-label="Instagram">
+              <a href="https://www.instagram.com/markus_barberia/" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors" aria-label="Instagram">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                   <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
                   <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
@@ -77,13 +77,13 @@ export default function Footer() {
                 </svg>
               </a>
               {/* Facebook SVG */}
-              <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors" aria-label="Facebook">
+              <a href="https://www.facebook.com/MarkusBarberia" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors" aria-label="Facebook">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path>
                 </svg>
               </a>
               {/* TikTok SVG */}
-              <a href="https://tiktok.com" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors" aria-label="TikTok">
+              <a href="https://www.tiktok.com/@markusbarberia?is_from_webapp=1&sender_device=pc" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors" aria-label="TikTok">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5"></path>
                 </svg>
@@ -127,7 +127,7 @@ export default function Footer() {
         {/* 4. BLOQUE INFERIOR Y COPYRIGHT */}
         <div className="w-full border-t border-zinc-800 mt-16 pt-8">
           <p className="text-center text-zinc-500 text-sm font-light tracking-wide">
-            © 2026 Markus Barbería. Todos los derechos reservados. Desarrollado por Jhon Patrick Dev.
+            © 2026 Markus Barbería. Todos los derechos reservados.
           </p>
         </div>
 

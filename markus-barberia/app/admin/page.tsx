@@ -48,14 +48,36 @@ export default function AdminDashboard() {
   }, []);
 
   const asignarPerfilPorEmail = (userEmail: string | undefined) => {
-    if (userEmail === "admin@markus.com") setUserProfile({ tipo: "master", refId: "todas" });
-    else if (userEmail === "pueblo@markus.com") setUserProfile({ tipo: "sede", refId: 1 }); 
-    else if (userEmail === "cercado@markus.com") setUserProfile({ tipo: "sede", refId: 2 }); 
-    else if (userEmail === "magdalena@markus.com") setUserProfile({ tipo: "sede", refId: 3 }); 
-    else if (userEmail === "sebastian@markus.com") setUserProfile({ tipo: "barbero", refId: 2 }); 
-    else if (userEmail === "piero@markus.com") setUserProfile({ tipo: "barbero", refId: 8 }); 
-    else setUserProfile({ tipo: "sede", refId: 0 }); 
-  };
+    if (!userEmail) return;
+    const emailNeto = userEmail.toLowerCase().trim();
+    // Administradores Master y Sedes
+    if (emailNeto === "admin@markus.com") setUserProfile({ tipo: "master", refId: "todas" });
+    else if (emailNeto === "pueblo@markus.com") setUserProfile({ tipo: "sede", refId: 1 }); 
+    else if (emailNeto === "cercado@markus.com") setUserProfile({ tipo: "sede", refId: 2 }); 
+    else if (emailNeto === "magdalena@markus.com") setUserProfile({ tipo: "sede", refId: 3 }); 
+
+    // Barberos - Pueblo Libre (Sede 1)
+    else if (emailNeto === "yeampier@markus.com") setUserProfile({ tipo: "barbero", refId: 1 }); 
+    else if (emailNeto === "patrick@markus.com") setUserProfile({ tipo: "barbero", refId: 2 }); 
+    else if (emailNeto === "hanziel@markus.com") setUserProfile({ tipo: "barbero", refId: 3 }); 
+    else if (emailNeto === "markus.barbero@markus.com") setUserProfile({ tipo: "barbero", refId: 4 }); 
+
+    // Barberos - Cercado de Lima (Sede 2)
+    else if (emailNeto === "gerson@markus.com") setUserProfile({ tipo: "barbero", refId: 5 }); 
+    else if (emailNeto === "manuel@markus.com") setUserProfile({ tipo: "barbero", refId: 6 }); 
+    else if (emailNeto === "alonso@markus.com") setUserProfile({ tipo: "barbero", refId: 7 }); 
+    else if (emailNeto === "andres.cercado@markus.com") setUserProfile({ tipo: "barbero", refId: 8 }); 
+    else if (emailNeto === "neymar@markus.com") setUserProfile({ tipo: "barbero", refId: 9 }); 
+    else if (emailNeto === "aslhy@markus.com") setUserProfile({ tipo: "barbero", refId: 10 }); 
+
+    // Barberos - Magdalena (Sede 3)
+    else if (emailNeto === "sebastian@markus.com") setUserProfile({ tipo: "barbero", refId: 11 }); 
+    else if (emailNeto === "andres.magdalena@markus.com") setUserProfile({ tipo: "barbero", refId: 12 }); 
+    else if (emailNeto === "luis@markus.com") setUserProfile({ tipo: "barbero", refId: 13 }); 
+    else if (emailNeto === "richard@markus.com") setUserProfile({ tipo: "barbero", refId: 14 }); 
+
+    else setUserProfile({ tipo: "sede", refId: 0 }); 
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();

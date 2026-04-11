@@ -22,10 +22,7 @@ export default function BookingModal({ isOpen, preSelection, onClose }: {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   
-  // ESTADO: Controla la vista de pagos
   const [paymentMethod, setPaymentMethod] = useState<'local' | 'yape' | null>(null);
-
-  // 👇 ESTADO: Controla la pestaña activa de servicios (Inicia con la de Supabase) 👇
   const [categoriaActiva, setCategoriaActiva] = useState('SERVICIOS');
 
   const [sedesDB, setSedesDB] = useState<any[]>([]);
@@ -163,21 +160,35 @@ export default function BookingModal({ isOpen, preSelection, onClose }: {
           return null;
         }).filter(Boolean) as { inicio: number, fin: number }[];
 
-        const APERTURA = 10 * 60; 
-        const CIERRE = 21.5 * 60;   
+        const APERTURA = 10 * 60; // 10:00 AM
+        const CIERRE = 21 * 60; // 9:00 PM  
         const INTERVALO = 30;     
         const duracionRequerida = totalMinutos > 0 ? totalMinutos : 30;
 
         const nuevosSlots: SlotHorario[] = [];
+        
+        // Obtenemos la hora actual en minutos para bloquear el pasado
+        const now = new Date();
+        const currentDateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        const isToday = selection.fecha === currentDateStr;
+        const currentMinutes = now.getHours() * 60 + now.getMinutes();
 
         for (let t = APERTURA; t < CIERRE; t += INTERVALO) {
           const tiempoFinEstimado = t + duracionRequerida;
 
+          // 🔥 LÓGICA 1: Viaje en el tiempo (Ocultar horas que ya pasaron HOY)
+          if (isToday && t <= currentMinutes) {
+             nuevosSlots.push({ horaTexto: minutosAHoraTexto(t), disponible: false });
+             continue;
+          }
+
+          // 🔥 LÓGICA 2: Bloqueo de duración contigua (Si la cita dura 3 hrs, debe haber espacio suficiente antes del cierre)
           if (tiempoFinEstimado > CIERRE) {
             nuevosSlots.push({ horaTexto: minutosAHoraTexto(t), disponible: false });
             continue;
           }
 
+          // 🔥 LÓGICA 3: Choque de citas intermedias (Si hay una cita metida entre el inicio y el fin de nuestras 3 hrs)
           const choca = rangosOcupados.some(rango => {
             return (t < rango.fin) && (tiempoFinEstimado > rango.inicio);
           });
@@ -358,8 +369,6 @@ export default function BookingModal({ isOpen, preSelection, onClose }: {
 
   const progressPercentage = ((Math.min(step, 6) - 1) / (stepsList.length - 1)) * 100;
   
-  // 👇 ARREGLO MAESTRO: DICCIONARIO DE CATEGORÍAS 👇
-  // Esto vincula el texto feo de tu base de datos con el texto bonito para el usuario
   const categoriasDB = ['SERVICIOS', 'COMBOS', 'COLORIMETRIA', 'PERMANENTE', 'EXTRA'];
   const nombreVisual: Record<string, string> = {
     'SERVICIOS': 'SERVICIOS',
@@ -490,13 +499,11 @@ export default function BookingModal({ isOpen, preSelection, onClose }: {
                   </div>
                 )}
 
-                {/* 👇 PASO 3: TABS CON NOMBRES VISUALES CORREGIDOS 👇 */}
                 {step === 3 && (
                   <div className="animate-fade-in pb-8">
                     <h2 className="text-3xl font-serif text-white mb-2">Servicios</h2>
                     <p className="text-stone-500 mb-6 font-light text-sm">Diseña tu experiencia seleccionando los servicios.</p>
                     
-                    {/* MENÚ DE PESTAÑAS HORIZONTAL */}
                     <div className="flex flex-row overflow-x-auto gap-3 pb-4 mb-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none'] border-b border-stone-800">
                       {categoriasDB.map((cat) => (
                         <button
@@ -514,7 +521,6 @@ export default function BookingModal({ isOpen, preSelection, onClose }: {
                       ))}
                     </div>
 
-                    {/* LISTA DE SERVICIOS FILTRADA POR LA CATEGORÍA DE SUPABASE */}
                     <div className="space-y-3 mt-4">
                       {serviciosDB
                         .filter(servicio => (servicio.categoria || 'SERVICIOS') === categoriaActiva)
@@ -522,11 +528,9 @@ export default function BookingModal({ isOpen, preSelection, onClose }: {
                         const isSelected = selection.servicios.some(s => s.id === servicio.id);
                         return (
                           <button type="button" key={servicio.id} onClick={() => toggleServicio(servicio)} 
-                            // 👇 FIX MÓVIL: Reduje el padding en celular (p-4) y agregué un gap-2 base
                             className={`w-full p-4 sm:p-5 rounded-2xl border text-left flex justify-between items-center transition-all duration-300 group gap-2
                             ${isSelected ? 'border-[#B07D54] bg-[#B07D54]/5 shadow-[0_0_10px_rgba(176,125,84,0.1)]' : 'border-stone-800 bg-[#1A1A1A] hover:border-stone-600'}`}>
                             
-                            {/* 👇 FIX MÓVIL: min-w-0 y pr-3 para que el texto largo se acomode sin empujar al precio 👇 */}
                             <div className="flex flex-col min-w-0 pr-3">
                               <span className={`font-serif text-lg leading-tight tracking-wide transition-colors ${isSelected ? 'text-[#B07D54]' : 'text-white group-hover:text-stone-200'}`}>
                                 {servicio.nombre}
@@ -536,7 +540,6 @@ export default function BookingModal({ isOpen, preSelection, onClose }: {
                               </span>
                             </div>
 
-                            {/* 👇 FIX MÓVIL: shrink-0 (intocable) y whitespace-nowrap (el precio no se rompe) 👇 */}
                             <div className="flex items-center gap-3 sm:gap-5 shrink-0">
                               <span className="font-sans text-lg sm:text-xl text-white tracking-widest whitespace-nowrap">
                                 S/ {servicio.precio}
@@ -550,7 +553,6 @@ export default function BookingModal({ isOpen, preSelection, onClose }: {
                         )
                       })}
 
-                      {/* Mensaje cuando está vacío mostrando el nombre bonito */}
                       {serviciosDB.filter(servicio => (servicio.categoria || 'SERVICIOS') === categoriaActiva).length === 0 && (
                         <div className="w-full p-8 border border-dashed border-stone-800 rounded-2xl flex flex-col items-center justify-center text-center mt-4">
                            <span className="text-stone-600 text-3xl mb-3">✂️</span>
@@ -750,12 +752,18 @@ export default function BookingModal({ isOpen, preSelection, onClose }: {
 
                     {!paymentMethod ? (
                       <div className="flex flex-col gap-4 max-w-md mx-auto mt-6">
+                        
                         <button
-                          onClick={() => setPaymentMethod('yape')}
-                          className="w-full bg-[#B07D54] text-[#161616] p-6 rounded-2xl transition-all shadow-[0_0_20px_rgba(176,125,84,0.2)] hover:shadow-[0_0_30px_rgba(176,125,84,0.4)] flex flex-col items-center gap-2"
+                          disabled
+                          className="w-full bg-[#1a1a1a] text-stone-600 p-6 rounded-2xl border border-stone-800 cursor-not-allowed flex flex-col items-center gap-2"
                         >
-                          <span className="text-lg font-bold uppercase tracking-widest">Pago Anticipado con Yape</span>
-                          <span className="text-xs font-medium bg-black/20 px-3 py-1 rounded-full">(Recomendado) Asegura tu cupo al instante</span>
+                          <div className="flex items-center gap-2 opacity-50">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.31-8.86c-1.77-.45-2.34-.94-2.34-1.67 0-.84.79-1.43 2.1-1.43 1.38 0 1.9.66 1.94 1.64h1.71c-.05-1.34-.87-2.57-2.49-2.97V5H10.9v1.69c-1.51.32-2.72 1.3-2.72 2.81 0 1.79 1.49 2.69 3.66 3.21 1.95.46 2.34 1.15 2.34 1.87 0 .53-.39 1.64-2.25 1.64-1.74 0-2.26-.95-2.32-1.81H7.84c.09 1.74 1.25 2.91 3.06 3.28V20h2.34v-1.66c1.63-.3 2.98-1.46 2.98-3.08 0-2.19-1.83-2.99-3.91-3.46z"/>
+                            </svg>
+                            <span className="text-lg font-bold uppercase tracking-widest">Pago con Yape</span>
+                          </div>
+                          <span className="text-xs font-medium bg-black/40 px-3 py-1 rounded-full">(Próximamente)</span>
                         </button>
 
                         <button
@@ -767,7 +775,7 @@ export default function BookingModal({ isOpen, preSelection, onClose }: {
                             <span className="text-sm font-bold uppercase tracking-widest">Procesando...</span>
                           ) : (
                             <>
-                              <span className="text-sm font-bold uppercase tracking-widest">Finalizar Reserva</span>
+                              <span className="text-sm font-bold uppercase tracking-widest text-[#B07D54]">Finalizar Reserva</span>
                               <span className="text-xs font-light text-stone-500">Pagaré todo en el local</span>
                             </>
                           )}

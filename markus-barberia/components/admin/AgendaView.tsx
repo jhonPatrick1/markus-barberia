@@ -9,6 +9,7 @@ export default function AgendaView({ citasRaw, sedes, userProfile, cargarDatos, 
   const [citaACobrar, setCitaACobrar] = useState<any | null>(null);
   const [citaACancelar, setCitaACancelar] = useState<number | null>(null);
   const [citaAVerificarPago, setCitaAVerificarPago] = useState<any | null>(null); 
+  const [citaAFinalizar, setCitaAFinalizar] = useState<any | null>(null); // NUEVO ESTADO PARA EL MODAL ELEGANTE
   const [isCanceling, setIsCanceling] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
 
@@ -52,14 +53,18 @@ export default function AgendaView({ citasRaw, sedes, userProfile, cargarDatos, 
     if (!citaACancelar) return;
     setIsCanceling(true);
     try {
-      await supabase.from('cita_servicios').delete().eq('cita_id', citaACancelar);
-      const { error } = await supabase.from('citas').delete().eq('id', citaACancelar);
+      const { error } = await supabase.from('citas').update({ 
+        estado: 'cancelada',
+        fecha_hora: '1999-01-01T00:00:00.000Z' 
+      }).eq('id', citaACancelar);
+
       if (error) throw error;
+      
       setCitaACancelar(null);
       cargarDatos();
-    } catch (error) {
+    } catch (error: any) {
       setCitaACancelar(null);
-      alert("Error al cancelar la cita.");
+      alert("Error al cancelar: " + error.message);
     } finally {
       setIsCanceling(false);
     }
@@ -82,6 +87,12 @@ export default function AgendaView({ citasRaw, sedes, userProfile, cargarDatos, 
     } finally {
       setIsVerifying(false);
     }
+  };
+
+  const ejecutarFinalizacion = () => {
+    if(!citaAFinalizar) return;
+    procesarCobro(citaAFinalizar.id, 0, citaAFinalizar.metodo_pago || 'Pago Anticipado');
+    setCitaAFinalizar(null);
   };
 
   const abrirModalVerificacion = (cita: any) => {
@@ -130,7 +141,24 @@ export default function AgendaView({ citasRaw, sedes, userProfile, cargarDatos, 
         </div>
       )}
 
-      {/* NUEVO MODAL: VERIFICAR PAGO */}
+      {/* NUEVO MODAL ELEGANTE: FINALIZAR CORTE (REEMPLAZA AL WINDOW.CONFIRM) */}
+      {citaAFinalizar && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
+          <div className="bg-white p-6 md:p-8 rounded-3xl shadow-2xl max-w-sm w-full text-center border border-emerald-100">
+            <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4 shadow-inner">
+              <span className="text-3xl">✅</span>
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2 font-serif uppercase tracking-widest">¿Terminaste el corte?</h3>
+            <p className="text-gray-500 text-sm mb-6">Confirma que finalizaste el servicio. Esto sumará la producción a tu ranking personal de manera automática.</p>
+            <div className="flex gap-3">
+              <button onClick={() => setCitaAFinalizar(null)} className="flex-1 py-3 rounded-xl font-bold text-xs uppercase tracking-widest bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors">Cancelar</button>
+              <button onClick={ejecutarFinalizacion} className="flex-1 py-3 rounded-xl font-bold text-xs uppercase tracking-widest bg-emerald-500 text-white hover:bg-emerald-600 transition-colors shadow-lg shadow-emerald-500/30">Sí, Finalizar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: VERIFICAR PAGO */}
       {citaAVerificarPago && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="bg-white p-6 md:p-8 rounded-2xl shadow-2xl max-w-sm w-full text-left">
@@ -140,7 +168,31 @@ export default function AgendaView({ citasRaw, sedes, userProfile, cargarDatos, 
             <div className="space-y-4 mb-6">
               <div>
                 <label htmlFor="estado-pago" className="block text-xs font-bold text-gray-500 uppercase mb-1">Estado del Pago</label>
-                <select id="estado-pago" aria-label="Estado del Pago" value={nuevoEstadoPago} onChange={e => setNuevoEstadoPago(e.target.value)} className="w-full border-2 border-gray-200 rounded-lg p-2.5 outline-none font-medium text-sm">
+                <select 
+                  id="estado-pago" 
+                  aria-label="Estado del Pago" 
+                  value={nuevoEstadoPago} 
+                  onChange={(e) => {
+                    const estadoSeleccionado = e.target.value;
+                    setNuevoEstadoPago(estadoSeleccionado);
+                    
+                    // 🔥 LÓGICA INTELIGENTE AUTOCOMPLETAR
+                    if (estadoSeleccionado === 'pagado') {
+                      let suma = 0;
+                      const serviciosRaw = Array.isArray(citaAVerificarPago.cita_servicios) ? citaAVerificarPago.cita_servicios : [];
+                      serviciosRaw.forEach((rel: any) => {
+                        const infoSrv = Array.isArray(rel.servicios) ? rel.servicios[0] : rel.servicios;
+                        suma += Number(infoSrv?.precio || 0);
+                      });
+                      const totalFinal = Number(citaAVerificarPago.monto_total || suma);
+                      
+                      setMontoAdelantado(totalFinal.toString());
+                    } else if (estadoSeleccionado === 'pendiente') {
+                      setMontoAdelantado(""); // Limpiamos la cajita si elige pendiente
+                    }
+                  }} 
+                  className="w-full border-2 border-gray-200 rounded-lg p-2.5 outline-none font-medium text-sm"
+                >
                   <option value="pendiente">Pendiente</option>
                   <option value="adelantado">Adelanto Verificado (Yape/Plin)</option>
                   <option value="pagado">Pagado 100%</option>
@@ -212,11 +264,9 @@ export default function AgendaView({ citasRaw, sedes, userProfile, cargarDatos, 
                 const isPagado = cita.estado_pago === 'pagado';
                 const isYapePorVerificar = cita.metodo_pago === 'Yape Anticipado' && cita.estado_pago === 'pendiente';
                 
-                // 👇 EXTRACCIÓN DEFENSIVA: Leemos bien aunque Supabase devuelva Objeto o Arreglo 👇
                 const nombreBarbero = Array.isArray(cita.barbero) ? cita.barbero[0]?.nombre : cita.barbero?.nombre;
                 const nombreSede = Array.isArray(cita.sede) ? cita.sede[0]?.nombre : cita.sede?.nombre;
                 
-                // Mapeamos los servicios de forma segura
                 const listaServiciosRaw = Array.isArray(cita.cita_servicios) ? cita.cita_servicios : [];
                 let sumaServicios = 0;
                 
@@ -240,7 +290,6 @@ export default function AgendaView({ citasRaw, sedes, userProfile, cargarDatos, 
                     <td className="p-4 align-top">
                       <div className="flex flex-col gap-2 items-start w-full max-w-xs">
                         
-                        {/* Etiquetas de Barbero y Sede */}
                         <div className="flex gap-2 flex-wrap">
                           <span className="bg-stone-100 px-2 py-1 rounded border border-stone-200 text-[11px] font-bold text-stone-700">✂️ {nombreBarbero || 'Sin asignar'}</span>
                           {userProfile.tipo === "master" && (
@@ -248,7 +297,6 @@ export default function AgendaView({ citasRaw, sedes, userProfile, cargarDatos, 
                           )}
                         </div>
 
-                        {/* TICKET DE SERVICIOS Y TOTAL */}
                         <div className="w-full bg-stone-50 border border-stone-200 rounded-lg p-3 mt-1">
                           <p className="text-[10px] uppercase tracking-widest text-stone-500 font-bold mb-2">Servicios Solicitados:</p>
                           <ul className="text-xs text-stone-700 space-y-1 mb-3">
@@ -270,7 +318,6 @@ export default function AgendaView({ citasRaw, sedes, userProfile, cargarDatos, 
                           </div>
                         </div>
 
-                        {/* BADGES FINANCIEROS */}
                         {isAdelantado && (
                           <span className="bg-emerald-50 text-emerald-700 px-2 py-1 rounded text-[10px] font-bold uppercase tracking-widest border border-emerald-200 w-full text-center">
                             Adelanto Pagado: S/ {Number(cita.monto_adelantado).toFixed(2)}
@@ -289,7 +336,32 @@ export default function AgendaView({ citasRaw, sedes, userProfile, cargarDatos, 
                       ) : (
                         <div className="flex justify-center gap-2 items-center">
                           {userProfile.tipo === "barbero" ? (
-                            <button onClick={() => setCitaACobrar(cita)} className="text-white bg-black hover:bg-stone-800 px-6 py-2 rounded-lg text-xs font-bold transition-all shadow-sm">COBRAR</button>
+                            
+                            (() => {
+                              const faltaCobrar = totalACobrarFinal - (Number(cita.monto_adelantado) || 0);
+
+                              if (faltaCobrar <= 0) {
+                                // BOTÓN QUE ACTIVA EL NUEVO MODAL ELEGANTE
+                                return (
+                                  <button 
+                                    onClick={() => setCitaAFinalizar(cita)}
+                                    className="text-emerald-700 bg-emerald-100 border border-emerald-400 hover:bg-emerald-500 hover:text-white w-full py-2 rounded-lg text-[11px] font-bold transition-all shadow-sm uppercase tracking-widest"
+                                  >
+                                    ✅ Finalizar Corte
+                                  </button>
+                                );
+                              } else {
+                                return (
+                                  <button 
+                                    onClick={() => setCitaACobrar(cita)} 
+                                    className="text-white bg-black hover:bg-stone-800 w-full py-2 rounded-lg text-[10px] font-bold transition-all shadow-sm uppercase tracking-widest"
+                                  >
+                                    Cobrar Restante (S/ {faltaCobrar.toFixed(2)})
+                                  </button>
+                                );
+                              }
+                            })()
+
                           ) : (
                             <div className="flex flex-col gap-2 items-center w-full">
                               {isYapePorVerificar && (
@@ -297,6 +369,32 @@ export default function AgendaView({ citasRaw, sedes, userProfile, cargarDatos, 
                                   🔔 ¡Revisar Yape! S/ {totalACobrarFinal.toFixed(2)}
                                 </span>
                               )}
+
+
+                            {(() => {
+                                const faltaCobrar = totalACobrarFinal - (Number(cita.monto_adelantado) || 0);
+
+                                if (faltaCobrar <= 0) {
+                                  return (
+                                    <button 
+                                      onClick={() => setCitaAFinalizar(cita)}
+                                      className="w-full text-emerald-700 hover:text-white border border-emerald-400 hover:bg-emerald-500 px-2 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all shadow-sm"
+                                    >
+                                      ✅ Forzar Cierre (Pagado)
+                                    </button>
+                                  );
+                                } else {
+                                  return (
+                                    <button 
+                                      onClick={() => setCitaACobrar(cita)} 
+                                      className="w-full text-stone-700 hover:text-white border border-stone-400 hover:bg-stone-800 px-2 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all shadow-sm"
+                                    >
+                                      💰 Cobrar en Caja (S/ {faltaCobrar.toFixed(2)})
+                                    </button>
+                                  );
+                                }
+                              })()}
+
                               <div className="flex gap-2 justify-center w-full">
                                 <button onClick={() => abrirModalVerificacion(cita)} className="flex-1 text-emerald-700 hover:text-white border border-emerald-300 hover:border-emerald-500 hover:bg-emerald-500 px-2 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all shadow-sm">
                                   Verificar ✓

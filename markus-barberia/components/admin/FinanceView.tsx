@@ -51,15 +51,19 @@ export default function FinanceView({ citasRaw, sedes, userProfile }: any) {
     const totalCobrado = Number(cita.monto_cobrado || 0);
     const adelanto = Number(cita.monto_adelantado || 0);
     
-    // Calculamos el restante (Efectivo), asegurando que no sea negativo
-    const restanteEfectivo = Math.max(0, totalCobrado - adelanto);
+    // Lo que se cobró hoy en el local
+    const restanteCobradoHoy = Math.max(0, totalCobrado - adelanto);
 
+    // 1. Registramos el adelanto (siempre entra por Yape/Plin según tu flujo actual)
     if (adelanto > 0) {
-      acc['Yape'] = (acc['Yape'] || 0) + adelanto;
+      acc['Adelanto (Yape)'] = (acc['Adelanto (Yape)'] || 0) + adelanto;
     }
     
-    if (restanteEfectivo > 0) {
-      acc['Efectivo'] = (acc['Efectivo'] || 0) + restanteEfectivo;
+    // 2. Registramos el pago final con el método EXACTO que eligió el barbero/admin
+    if (restanteCobradoHoy > 0) {
+      // Si la base de datos no tiene método (citas viejas), asumimos Efectivo
+      const metodoReal = cita.metodo_pago || 'Efectivo'; 
+      acc[metodoReal] = (acc[metodoReal] || 0) + restanteCobradoHoy;
     }
 
     return acc;
@@ -97,6 +101,8 @@ export default function FinanceView({ citasRaw, sedes, userProfile }: any) {
 
     const encabezados = ["Fecha", "Hora", "Cliente", "Sede", "Barbero", "Monto Cobrado (S/)", "Metodo de Pago"];
     
+    let sumaTotal = 0;
+
     const filas = citasCompletadas.map((cita: any) => {
       const safeDateStr = cita.fecha_hora ? cita.fecha_hora.replace(' ', 'T') : '';
       const fechaObj = new Date(safeDateStr);
@@ -110,11 +116,22 @@ export default function FinanceView({ citasRaw, sedes, userProfile }: any) {
       const nombreBarbero = Array.isArray(cita.barbero) ? cita.barbero[0]?.nombre : cita.barbero?.nombre;
       const barbero = `"${nombreBarbero || 'N/A'}"`;
       
-      const monto = cita.monto_cobrado || 0;
+      const monto = Number(cita.monto_cobrado || 0);
+      sumaTotal += monto; // Vamos sumando la plata por cada fila
+      
       const metodo = cita.metodo_pago || 'N/A';
       
-      return [fecha, hora, cliente, sede, barbero, monto, metodo].join(",");
+      return [fecha, hora, cliente, sede, barbero, monto.toFixed(2), metodo].join(",");
     });
+
+    // 🔥 LA MAGIA: Agregamos las filas del Total al final del documento
+    filas.push(""); // Una fila en blanco para separar y que se vea ordenado
+    filas.push([
+      "\"\"", "\"\"", "\"\"", "\"\"", 
+      "\"TOTAL RECAUDADO:\"", 
+      sumaTotal.toFixed(2), 
+      "\"\""
+    ].join(","));
 
     const contenidoCSV = "\uFEFF" + [encabezados.join(","), ...filas].join("\n");
     const blob = new Blob([contenidoCSV], { type: 'text/csv;charset=utf-8;' });
