@@ -5,6 +5,7 @@ import { supabase } from "../../lib/supabase";
 import Sidebar from "../../components/admin/Sidebar";
 import AgendaView from "../../components/admin/AgendaView";
 import FinanceView from "../../components/admin/FinanceView";
+export const dynamic = 'force-dynamic';
 
 type UserProfile = { tipo: "master" | "sede" | "barbero", refId: string | number };
 
