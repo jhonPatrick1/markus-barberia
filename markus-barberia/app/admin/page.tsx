@@ -71,7 +71,7 @@ export default function AdminDashboard() {
     else if (emailNeto === "alonso@markus.com") setUserProfile({ tipo: "barbero", refId: 7 }); 
     else if (emailNeto === "andres.cercado@markus.com") setUserProfile({ tipo: "barbero", refId: 8 }); 
     else if (emailNeto === "neymar@markus.com") setUserProfile({ tipo: "barbero", refId: 9 }); 
-    else if (emailNeto === "aslhy@markus.com") setUserProfile({ tipo: "barbero", refId: 10 }); 
+    else if (emailNeto === "ashly@markus.com") setUserProfile({ tipo: "barbero", refId: 10 }); 
 
     // Barberos - Magdalena (Sede 3)
     else if (emailNeto === "sebastian@markus.com") setUserProfile({ tipo: "barbero", refId: 11 }); 
