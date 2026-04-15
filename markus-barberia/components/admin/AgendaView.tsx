@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabase";
 import ChargeModal from "./ChargeModal";
 
@@ -24,6 +24,25 @@ export default function AgendaView({ citasRaw, sedes, barberos = [], userProfile
     return `${year}-${month}-${day}`;
   };
   const [fechaSeleccionada, setFechaSeleccionada] = useState<string>(getLocalYYYYMMDD(new Date()));
+
+  // 🔥 MOTOR SUPABASE REALTIME 🔥
+  useEffect(() => {
+    const canalCitas = supabase
+      .channel('escuchando-citas')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'citas' },
+        (payload) => {
+          console.log('¡Cambio detectado!', payload);
+          cargarDatos(); 
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(canalCitas);
+    };
+  }, [cargarDatos]);
 
   const procesarCobro = async (citaId: number, montoEntregadoHoy: number, metodo: string) => {
     try {
@@ -103,6 +122,16 @@ export default function AgendaView({ citasRaw, sedes, barberos = [], userProfile
     setFechaSeleccionada(getLocalYYYYMMDD(new Date(year, month - 1, day + dias)));
   };
   const irAHoy = () => setFechaSeleccionada(getLocalYYYYMMDD(new Date()));
+
+  // FUNCIONES DE FORMATEO DE TIEMPO
+  const formatDuracionTexto = (mins: number) => {
+    if (mins >= 60) {
+      const h = Math.floor(mins / 60);
+      const m = mins % 60;
+      return m > 0 ? `${h}h ${m}m` : `${h}h`;
+    }
+    return `${mins}m`;
+  };
 
   // === FILTROS EN CASCADA ===
   const safeCitasRaw = citasRaw || [];
@@ -286,7 +315,7 @@ export default function AgendaView({ citasRaw, sedes, barberos = [], userProfile
         <table className="w-full min-w-[800px] text-left border-collapse">
           <thead>
             <tr className="bg-stone-100 text-stone-500 text-xs uppercase tracking-wider border-b border-stone-200">
-              <th className="p-4 font-bold">Hora</th>
+              <th className="p-4 font-bold w-36">Horario</th>
               <th className="p-4 font-bold">Cliente</th>
               <th className="p-4 font-bold">Detalle y Servicios</th>
               <th className="p-4 text-center font-bold">Estado / Acción</th>
@@ -296,17 +325,43 @@ export default function AgendaView({ citasRaw, sedes, barberos = [], userProfile
               {citasDelDia.map((cita: any) => {
                 const safeDateStr = cita.fecha_hora ? cita.fecha_hora.replace(' ', 'T') : '';
                 const fechaLocal = new Date(safeDateStr);
+                const horaInicioStr = fechaLocal.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                
                 const nombreBarbero = Array.isArray(cita.barbero) ? cita.barbero[0]?.nombre : cita.barbero?.nombre;
                 const nombreSede = Array.isArray(cita.sede) ? cita.sede[0]?.nombre : cita.sede?.nombre;
                 
                 const isBloqueo = cita.cliente_nombre === "BLOQUEO";
 
+                // 🔥 LÓGICA MATEMÁTICA PARA LA HORA DE FIN Y DURACIÓN 🔥
+                let sumaDuracionServicios = 0;
+                let sumaServicios = 0;
+                const listaServiciosRaw = Array.isArray(cita.cita_servicios) ? cita.cita_servicios : [];
+                
+                const listaServiciosFormateada = listaServiciosRaw.map((relacion: any) => {
+                   const infoSrv = Array.isArray(relacion.servicios) ? relacion.servicios[0] : relacion.servicios;
+                   const nombre = infoSrv?.nombre || 'Servicio sin nombre';
+                   const precio = Number(infoSrv?.precio || 0);
+                   const durSrv = Number(infoSrv?.duracion_minutos || 0);
+                   sumaServicios += precio;
+                   sumaDuracionServicios += durSrv;
+                   return { nombre, precio };
+                });
+
+                const duracionFinalMinutos = Number(cita.duracion_total_minutos) || Math.max(sumaDuracionServicios, 30);
+                const fechaFin = new Date(fechaLocal.getTime() + duracionFinalMinutos * 60000); 
+                const horaFinStr = fechaFin.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                const duracionLegible = formatDuracionTexto(duracionFinalMinutos);
+
                 // 🔥 LÓGICA VISUAL EXCLUSIVA PARA EL BLOQUEO (FANTASMA) 🔥
                 if (isBloqueo) {
                   return (
                     <tr key={cita.id} className="bg-[#B07D54]/5 hover:bg-[#B07D54]/10 transition-colors">
-                      <td className="p-4 align-top">
-                        <div className="font-bold text-stone-500 mt-1 whitespace-nowrap">{fechaLocal.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
+                      <td className="p-4 align-top border-l-4 border-[#B07D54]">
+                        <div className="font-bold text-stone-700 mt-1 whitespace-nowrap">{horaInicioStr}</div>
+                        <div className="text-xs text-stone-500 mt-0.5 whitespace-nowrap">hasta {horaFinStr}</div>
+                        <div className="text-[10px] bg-white border border-[#B07D54]/30 text-[#B07D54] px-2 py-0.5 rounded-md inline-block mt-2 font-bold tracking-widest">
+                          ⏱ {duracionLegible}
+                        </div>
                       </td>
                       <td colSpan={3} className="p-4 align-middle">
                         <div className="bg-[#B07D54]/10 border border-[#B07D54]/30 border-dashed rounded-xl p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
@@ -330,23 +385,23 @@ export default function AgendaView({ citasRaw, sedes, barberos = [], userProfile
                 const isAdelantado = cita.estado_pago === 'adelantado';
                 const isPagado = cita.estado_pago === 'pagado';
                 const isYapePorVerificar = cita.metodo_pago === 'Yape Anticipado' && cita.estado_pago === 'pendiente';
-                
-                const listaServiciosRaw = Array.isArray(cita.cita_servicios) ? cita.cita_servicios : [];
-                let sumaServicios = 0;
-                
-                const listaServiciosFormateada = listaServiciosRaw.map((relacion: any) => {
-                   const infoSrv = Array.isArray(relacion.servicios) ? relacion.servicios[0] : relacion.servicios;
-                   const nombre = infoSrv?.nombre || 'Servicio sin nombre';
-                   const precio = Number(infoSrv?.precio || 0);
-                   sumaServicios += precio;
-                   return { nombre, precio };
-                });
-
                 const totalACobrarFinal = Number(cita.monto_total || sumaServicios);
 
                 return (
                   <tr key={cita.id} className={`transition-colors ${cita.estado === 'completada' ? 'bg-emerald-50/30' : 'hover:bg-stone-50'}`}>
-                    <td className="p-4 align-top"><div className="font-bold text-black mt-1 whitespace-nowrap">{fechaLocal.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div></td>
+                    
+                    <td className="p-4 align-top">
+                      <div className={`font-bold mt-1 whitespace-nowrap ${cita.estado === 'completada' ? 'text-emerald-900' : 'text-black'}`}>
+                        {horaInicioStr}
+                      </div>
+                      <div className="text-xs text-stone-500 mt-0.5 whitespace-nowrap">
+                        hasta {horaFinStr}
+                      </div>
+                      <div className="text-[10px] bg-stone-100 border border-stone-200 text-stone-600 px-2 py-0.5 rounded-md inline-block mt-2 font-bold tracking-widest">
+                        ⏱ {duracionLegible}
+                      </div>
+                    </td>
+
                     <td className="p-4 align-top">
                       <div className="font-bold text-sm text-stone-900 mt-1 whitespace-nowrap">{cita.cliente_nombre} {cita.cliente_apellido}</div>
                       <div className="text-xs text-stone-500 mt-0.5 whitespace-nowrap">{cita.cliente_celular}</div>
@@ -432,7 +487,6 @@ export default function AgendaView({ citasRaw, sedes, barberos = [], userProfile
                                   🔔 ¡Revisar Yape! S/ {totalACobrarFinal.toFixed(2)}
                                 </span>
                               )}
-
 
                             {(() => {
                                 const faltaCobrar = totalACobrarFinal - (Number(cita.monto_adelantado) || 0);
