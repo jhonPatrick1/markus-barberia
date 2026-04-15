@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarDays, LineChart, LogOut, Scissors, Menu, X } from "lucide-react";
+import { CalendarDays, LineChart, LogOut, Scissors, Menu, X, Users } from "lucide-react";
 import { useState } from "react";
 
 export default function Sidebar({ activeView, setActiveView, userProfile, onLogout }: any) {
@@ -14,7 +14,6 @@ export default function Sidebar({ activeView, setActiveView, userProfile, onLogo
         <h1 className="text-xl font-bold font-serif tracking-widest uppercase flex items-center gap-2">
           <Scissors size={20} /> MARKUS
         </h1>
-        {/*  */}
         <button 
           onClick={() => setIsOpen(true)} 
           aria-label="Abrir menú de navegación"
@@ -38,7 +37,6 @@ export default function Sidebar({ activeView, setActiveView, userProfile, onLogo
           isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
         }`}
       >
-        {/* 👇 SOLUCIÓN AQUÍ: Agregamos aria-label al botón de cerrar 👇 */}
         <button 
           onClick={() => setIsOpen(false)} 
           aria-label="Cerrar menú de navegación"
@@ -87,6 +85,22 @@ export default function Sidebar({ activeView, setActiveView, userProfile, onLogo
           >
             <LineChart size={18} />
             Panel Financiero
+          </button>
+
+          {/* 👇 NUEVO BOTÓN: Gestión de Sede 👇 */}
+          <button
+            onClick={() => { 
+              setActiveView('gestion'); 
+              setIsOpen(false); 
+            }}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-bold transition-all ${
+              activeView === 'gestion' 
+                ? 'bg-white text-black shadow-md' 
+                : 'text-neutral-400 hover:bg-neutral-800 hover:text-white'
+            }`}
+          >
+            <Users size={18} />
+            Gestión de Sede
           </button>
         </nav>
 

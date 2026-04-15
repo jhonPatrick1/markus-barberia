@@ -104,7 +104,7 @@ export default function BookingModal({ isOpen, preSelection, onClose }: {
       setIsLoadingData(true);
       const [resSedes, resBarberos, resServicios] = await Promise.all([
         supabase.from('sedes').select('*').order('id', { ascending: true }),
-        supabase.from('barberos').select('*').order('nombre', { ascending: true }),
+        supabase.from('barberos').select('*').eq('activo', true).order('nombre', { ascending: true }),
         supabase.from('servicios').select('*').order('id', { ascending: true }) 
       ]);
 

@@ -1,10 +1,12 @@
 "use client";
+
 // Esto es un cambio real
 import { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabase"; 
 import Sidebar from "../../components/admin/Sidebar";
 import AgendaView from "../../components/admin/AgendaView";
 import FinanceView from "../../components/admin/FinanceView";
+import GestionSede from "../../components/admin/GestionSede";
 export const dynamic = 'force-dynamic';
 
 type UserProfile = { tipo: "master" | "sede" | "barbero", refId: string | number };
@@ -15,14 +17,14 @@ export default function AdminDashboard() {
   const [email, setEmail] = useState(""); 
   const [password, setPassword] = useState("");
   const [errorLogin, setErrorLogin] = useState("");
+  const [activeView, setActiveView] = useState<'agenda' | 'finanzas' | 'gestion'>('agenda');
   const [isCheckingSession, setIsCheckingSession] = useState(true); 
   const [isLoggingIn, setIsLoggingIn] = useState(false); 
+  const [listaBarberos, setListaBarberos] = useState<any[]>([]);
 
   const [citas, setCitas] = useState<any[]>([]);
   const [sedes, setSedes] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-
-  const [activeView, setActiveView] = useState<'agenda' | 'finanzas'>('agenda');
 
   useEffect(() => {
     const checkSession = async () => {
@@ -51,34 +53,34 @@ export default function AdminDashboard() {
   const asignarPerfilPorEmail = (userEmail: string | undefined) => {
     if (!userEmail) return;
     const emailNeto = userEmail.toLowerCase().trim();
-    // Administradores Master y Sedes
-    if (emailNeto === "admin@markus.com") setUserProfile({ tipo: "master", refId: "todas" });
-    else if (emailNeto === "pueblo@markus.com") setUserProfile({ tipo: "sede", refId: 1 }); 
-    else if (emailNeto === "cercado@markus.com") setUserProfile({ tipo: "sede", refId: 2 }); 
-    else if (emailNeto === "magdalena@markus.com") setUserProfile({ tipo: "sede", refId: 3 }); 
+    // Administradores Master y Sedes
+    if (emailNeto === "admin@markus.com") setUserProfile({ tipo: "master", refId: "todas" });
+    else if (emailNeto === "pueblo@markus.com") setUserProfile({ tipo: "sede", refId: 1 }); 
+    else if (emailNeto === "cercado@markus.com") setUserProfile({ tipo: "sede", refId: 2 }); 
+    else if (emailNeto === "magdalena@markus.com") setUserProfile({ tipo: "sede", refId: 3 }); 
 
-    // Barberos - Pueblo Libre (Sede 1)
-    else if (emailNeto === "yeampier@markus.com") setUserProfile({ tipo: "barbero", refId: 1 }); 
-    else if (emailNeto === "patrick@markus.com") setUserProfile({ tipo: "barbero", refId: 2 }); 
-    else if (emailNeto === "hanziel@markus.com") setUserProfile({ tipo: "barbero", refId: 3 }); 
-    else if (emailNeto === "markus.barbero@markus.com") setUserProfile({ tipo: "barbero", refId: 4 }); 
+    // Barberos - Pueblo Libre (Sede 1)
+    else if (emailNeto === "yeampier@markus.com") setUserProfile({ tipo: "barbero", refId: 1 }); 
+    else if (emailNeto === "patrick@markus.com") setUserProfile({ tipo: "barbero", refId: 2 }); 
+    else if (emailNeto === "hanziel@markus.com") setUserProfile({ tipo: "barbero", refId: 3 }); 
+    else if (emailNeto === "markus.barbero@markus.com") setUserProfile({ tipo: "barbero", refId: 4 }); 
 
-    // Barberos - Cercado de Lima (Sede 2)
-    else if (emailNeto === "gerson@markus.com") setUserProfile({ tipo: "barbero", refId: 5 }); 
-    else if (emailNeto === "manuel@markus.com") setUserProfile({ tipo: "barbero", refId: 6 }); 
-    else if (emailNeto === "alonso@markus.com") setUserProfile({ tipo: "barbero", refId: 7 }); 
-    else if (emailNeto === "andres.cercado@markus.com") setUserProfile({ tipo: "barbero", refId: 8 }); 
-    else if (emailNeto === "neymar@markus.com") setUserProfile({ tipo: "barbero", refId: 9 }); 
-    else if (emailNeto === "aslhy@markus.com") setUserProfile({ tipo: "barbero", refId: 10 }); 
+    // Barberos - Cercado de Lima (Sede 2)
+    else if (emailNeto === "gerson@markus.com") setUserProfile({ tipo: "barbero", refId: 5 }); 
+    else if (emailNeto === "manuel@markus.com") setUserProfile({ tipo: "barbero", refId: 6 }); 
+    else if (emailNeto === "alonso@markus.com") setUserProfile({ tipo: "barbero", refId: 7 }); 
+    else if (emailNeto === "andres.cercado@markus.com") setUserProfile({ tipo: "barbero", refId: 8 }); 
+    else if (emailNeto === "neymar@markus.com") setUserProfile({ tipo: "barbero", refId: 9 }); 
+    else if (emailNeto === "aslhy@markus.com") setUserProfile({ tipo: "barbero", refId: 10 }); 
 
-    // Barberos - Magdalena (Sede 3)
-    else if (emailNeto === "sebastian@markus.com") setUserProfile({ tipo: "barbero", refId: 11 }); 
-    else if (emailNeto === "andres.magdalena@markus.com") setUserProfile({ tipo: "barbero", refId: 12 }); 
-    else if (emailNeto === "luis@markus.com") setUserProfile({ tipo: "barbero", refId: 13 }); 
-    else if (emailNeto === "richard@markus.com") setUserProfile({ tipo: "barbero", refId: 14 }); 
+    // Barberos - Magdalena (Sede 3)
+    else if (emailNeto === "sebastian@markus.com") setUserProfile({ tipo: "barbero", refId: 11 }); 
+    else if (emailNeto === "andres.magdalena@markus.com") setUserProfile({ tipo: "barbero", refId: 12 }); 
+    else if (emailNeto === "luis@markus.com") setUserProfile({ tipo: "barbero", refId: 13 }); 
+    else if (emailNeto === "richard@markus.com") setUserProfile({ tipo: "barbero", refId: 14 }); 
 
-    else setUserProfile({ tipo: "sede", refId: 0 }); 
-  };
+    else setUserProfile({ tipo: "sede", refId: 0 }); 
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -110,8 +112,9 @@ export default function AdminDashboard() {
     const { data: dataSedes } = await supabase.from('sedes').select('*');
     if (dataSedes) setSedes(dataSedes);
 
+    const { data: dataBarberos } = await supabase.from('barberos').select('*').order('nombre');
+    if (dataBarberos) setListaBarberos(dataBarberos);
     
-
     // 1. Preparamos el query
     let query = supabase
       .from('citas')
@@ -127,6 +130,7 @@ export default function AdminDashboard() {
 
     const { data: dataCitas } = await query;
     if (dataCitas) setCitas(dataCitas);
+    setListaBarberos(dataBarberos || []);
     setIsLoading(false);
   };
 
@@ -172,6 +176,7 @@ export default function AdminDashboard() {
         <AgendaView 
           citasRaw={citas} 
           sedes={sedes}
+          barberos={listaBarberos}
           userProfile={userProfile} 
           cargarDatos={cargarDatos}
           onLogout={handleLogout}
@@ -192,7 +197,7 @@ export default function AdminDashboard() {
 
       <main className="flex-1 overflow-y-auto p-4 md:p-8 animate-fade-in">
         
-        {/* 👇 NUEVA CABECERA BLANCA (Reemplaza la que perdimos) 👇 */}
+        {/* 👇 NUEVA CABECERA BLANCA 👇 */}
         <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-6 bg-white p-5 rounded-xl shadow-sm border border-stone-200">
           <div>
             <h2 className="text-xl font-bold font-serif text-stone-800 uppercase tracking-wide">{nombreVista}</h2>
@@ -206,19 +211,28 @@ export default function AdminDashboard() {
           </button>
         </div>
 
+        {/* 👇 AQUÍ ESTÁ LA LÓGICA DE VISTAS LIMPIA Y SIN DUPLICADOS 👇 */}
         {activeView === 'agenda' ? (
           <AgendaView 
             citasRaw={citas} 
             sedes={sedes}
+            barberos={listaBarberos}
             userProfile={userProfile} 
             cargarDatos={cargarDatos}
             onLogout={handleLogout} 
           />
-        ) : (
+        ) : activeView === 'finanzas' ? (
           <FinanceView 
             citasRaw={citas} 
             sedes={sedes}
             userProfile={userProfile}
+          />
+        ) : (
+          <GestionSede 
+            barberos={listaBarberos} 
+            citasRaw={citas}
+            userProfile={userProfile}
+            cargarDatos={cargarDatos}
           />
         )}
       </main>

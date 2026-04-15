@@ -1,23 +1,21 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { supabase } from "../../lib/supabase";
 import ChargeModal from "./ChargeModal";
 
-export default function AgendaView({ citasRaw, sedes, userProfile, cargarDatos, onLogout }: any) {
-  // === ESTADOS PARA MODALES ===
+export default function AgendaView({ citasRaw, sedes, barberos = [], userProfile, cargarDatos, onLogout }: any) {
   const [citaACobrar, setCitaACobrar] = useState<any | null>(null);
   const [citaACancelar, setCitaACancelar] = useState<number | null>(null);
   const [citaAVerificarPago, setCitaAVerificarPago] = useState<any | null>(null); 
-  const [citaAFinalizar, setCitaAFinalizar] = useState<any | null>(null); // NUEVO ESTADO PARA EL MODAL ELEGANTE
+  const [citaAFinalizar, setCitaAFinalizar] = useState<any | null>(null);
   const [isCanceling, setIsCanceling] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
 
-  // === ESTADOS PARA FINANZAS ===
   const [nuevoEstadoPago, setNuevoEstadoPago] = useState("adelantado");
   const [montoAdelantado, setMontoAdelantado] = useState("");
-
   const [filtroSedeMaster, setFiltroSedeMaster] = useState<string>("todas");
+  const [filtroBarberoId, setFiltroBarberoId] = useState<string>("todos");
   
   const getLocalYYYYMMDD = (date: Date) => {
     const year = date.getFullYear();
@@ -27,32 +25,6 @@ export default function AgendaView({ citasRaw, sedes, userProfile, cargarDatos, 
   };
   const [fechaSeleccionada, setFechaSeleccionada] = useState<string>(getLocalYYYYMMDD(new Date()));
 
-  // 🔥 === MOTOR SUPABASE REALTIME === 🔥
-  useEffect(() => {
-    const canalCitas = supabase
-      .channel('escuchando-citas')
-      .on(
-        'postgres_changes',
-        { 
-          event: '*', // Escucha TODO: INSERT, UPDATE, DELETE
-          schema: 'public', 
-          table: 'citas' 
-        },
-        (payload) => {
-          console.log('¡Cambio detectado por Supabase Realtime!', payload);
-          // Si alguien reserva o paga, recargamos la data automáticamente
-          cargarDatos(); 
-        }
-      )
-      .subscribe();
-
-    // Limpiamos el canal al desmontar para no gastar memoria
-    return () => {
-      supabase.removeChannel(canalCitas);
-    };
-  }, [cargarDatos]);
-
-  // === LÓGICA DE BASE DE DATOS ===
   const procesarCobro = async (citaId: number, montoEntregadoHoy: number, metodo: string) => {
     try {
       const citaActual = citasRaw.find((c: any) => c.id === citaId);
@@ -132,8 +104,10 @@ export default function AgendaView({ citasRaw, sedes, userProfile, cargarDatos, 
   };
   const irAHoy = () => setFechaSeleccionada(getLocalYYYYMMDD(new Date()));
 
-  // === FILTROS ===
-  const citasFiltradas = citasRaw.filter((c: any) => {
+  // === FILTROS EN CASCADA ===
+  const safeCitasRaw = citasRaw || [];
+  
+  const citasFiltradas = safeCitasRaw.filter((c: any) => {
     if (userProfile.tipo === "barbero") return c.barbero_id?.toString() === userProfile.refId.toString();
     if (userProfile.tipo === "sede") return c.sede_id?.toString() === userProfile.refId.toString();
     if (userProfile.tipo === "master" && filtroSedeMaster !== "todas") return c.sede_id?.toString() === filtroSedeMaster;
@@ -143,15 +117,21 @@ export default function AgendaView({ citasRaw, sedes, userProfile, cargarDatos, 
   const citasDelDia = citasFiltradas.filter((cita: any) => {
     if (!cita.fecha_hora) return false;
     const safeDateStr = cita.fecha_hora.replace(' ', 'T');
-    return getLocalYYYYMMDD(new Date(safeDateStr)) === fechaSeleccionada;
+    const cumpleFecha = getLocalYYYYMMDD(new Date(safeDateStr)) === fechaSeleccionada;
+    const cumpleBarbero = filtroBarberoId === "todos" || cita.barbero_id?.toString() === filtroBarberoId;
+    return cumpleFecha && cumpleBarbero;
   });
   
   const isBarbero = userProfile.tipo === "barbero";
 
+  const barberosFiltrados = userProfile.tipo === "sede" 
+    ? barberos.filter((b: any) => b.sede_id?.toString() === userProfile.refId.toString())
+    : barberos;
+
   return (
     <div className="space-y-6 animate-fade-in">
       
-      {/* MODALES EXISTENTES */}
+      {/* === ZONA DE MODALES === */}
       {citaACobrar && <ChargeModal cita={citaACobrar} onClose={() => setCitaACobrar(null)} onConfirmarCobro={procesarCobro} />}
       {citaACancelar && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
@@ -166,7 +146,6 @@ export default function AgendaView({ citasRaw, sedes, userProfile, cargarDatos, 
         </div>
       )}
 
-      {/* NUEVO MODAL ELEGANTE: FINALIZAR CORTE (REEMPLAZA AL WINDOW.CONFIRM) */}
       {citaAFinalizar && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
           <div className="bg-white p-6 md:p-8 rounded-3xl shadow-2xl max-w-sm w-full text-center border border-emerald-100">
@@ -183,7 +162,6 @@ export default function AgendaView({ citasRaw, sedes, userProfile, cargarDatos, 
         </div>
       )}
 
-      {/* MODAL: VERIFICAR PAGO */}
       {citaAVerificarPago && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="bg-white p-6 md:p-8 rounded-2xl shadow-2xl max-w-sm w-full text-left">
@@ -201,7 +179,6 @@ export default function AgendaView({ citasRaw, sedes, userProfile, cargarDatos, 
                     const estadoSeleccionado = e.target.value;
                     setNuevoEstadoPago(estadoSeleccionado);
                     
-                    // 🔥 LÓGICA INTELIGENTE AUTOCOMPLETAR
                     if (estadoSeleccionado === 'pagado') {
                       let suma = 0;
                       const serviciosRaw = Array.isArray(citaAVerificarPago.cita_servicios) ? citaAVerificarPago.cita_servicios : [];
@@ -210,10 +187,9 @@ export default function AgendaView({ citasRaw, sedes, userProfile, cargarDatos, 
                         suma += Number(infoSrv?.precio || 0);
                       });
                       const totalFinal = Number(citaAVerificarPago.monto_total || suma);
-                      
                       setMontoAdelantado(totalFinal.toString());
                     } else if (estadoSeleccionado === 'pendiente') {
-                      setMontoAdelantado(""); // Limpiamos la cajita si elige pendiente
+                      setMontoAdelantado(""); 
                     }
                   }} 
                   className="w-full border-2 border-gray-200 rounded-lg p-2.5 outline-none font-medium text-sm"
@@ -251,7 +227,7 @@ export default function AgendaView({ citasRaw, sedes, userProfile, cargarDatos, 
          </div>
       )}
 
-      {/* CONTROLES DE FECHA */}
+      {/* CONTROLES SUPERIORES (Fecha y Sede) */}
       <div className="bg-white p-4 rounded-xl shadow-sm border border-stone-200 flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-2">
           <button onClick={() => cambiarDia(-1)} className="px-4 py-2 border border-stone-200 rounded-lg text-sm font-medium hover:bg-stone-50 whitespace-nowrap">◀ Anterior</button>
@@ -269,6 +245,42 @@ export default function AgendaView({ citasRaw, sedes, userProfile, cargarDatos, 
         </div>
       </div>
 
+      {/* CARRUSEL HORIZONTAL DE BARBEROS */}
+      {!isBarbero && barberosFiltrados.length > 0 && (
+        <div className="bg-white p-4 rounded-xl shadow-sm border border-stone-200">
+          <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-3 pl-1">Filtrar por Especialista</p>
+          
+          <div className="flex overflow-x-auto snap-x snap-mandatory gap-2 pb-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
+            <button
+              onClick={() => setFiltroBarberoId("todos")}
+              className={`snap-start shrink-0 px-5 py-2.5 rounded-full text-xs font-bold tracking-widest uppercase transition-all duration-300 ${
+                filtroBarberoId === "todos" ? 'bg-black text-white shadow-md' : 'bg-stone-100 text-stone-500 hover:bg-stone-200'
+              }`}
+            >
+              Todos los Especialistas
+            </button>
+            
+            {barberosFiltrados.map((barbero: any) => {
+              const isSelected = filtroBarberoId === barbero.id?.toString();
+              return (
+                <button
+                  key={barbero.id}
+                  onClick={() => setFiltroBarberoId(barbero.id.toString())}
+                  className={`snap-start shrink-0 px-5 py-2.5 rounded-full text-xs font-bold tracking-widest uppercase transition-all duration-300 flex items-center gap-2 ${
+                    isSelected ? 'bg-[#B07D54] text-[#161616] shadow-md' : 'bg-white border border-stone-200 text-stone-600 hover:border-stone-400'
+                  }`}
+                >
+                  <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] ${isSelected ? 'bg-[#161616] text-[#B07D54]' : 'bg-stone-100 text-stone-400'}`}>
+                    ✂️
+                  </span>
+                  {barbero.nombre}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* TABLA DE CITAS */}
       <div className="bg-white rounded-xl shadow-sm border border-stone-200 overflow-x-auto w-full custom-scrollbar">
         <table className="w-full min-w-[800px] text-left border-collapse">
@@ -284,12 +296,40 @@ export default function AgendaView({ citasRaw, sedes, userProfile, cargarDatos, 
               {citasDelDia.map((cita: any) => {
                 const safeDateStr = cita.fecha_hora ? cita.fecha_hora.replace(' ', 'T') : '';
                 const fechaLocal = new Date(safeDateStr);
+                const nombreBarbero = Array.isArray(cita.barbero) ? cita.barbero[0]?.nombre : cita.barbero?.nombre;
+                const nombreSede = Array.isArray(cita.sede) ? cita.sede[0]?.nombre : cita.sede?.nombre;
+                
+                const isBloqueo = cita.cliente_nombre === "BLOQUEO";
+
+                // 🔥 LÓGICA VISUAL EXCLUSIVA PARA EL BLOQUEO (FANTASMA) 🔥
+                if (isBloqueo) {
+                  return (
+                    <tr key={cita.id} className="bg-[#B07D54]/5 hover:bg-[#B07D54]/10 transition-colors">
+                      <td className="p-4 align-top">
+                        <div className="font-bold text-stone-500 mt-1 whitespace-nowrap">{fechaLocal.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
+                      </td>
+                      <td colSpan={3} className="p-4 align-middle">
+                        <div className="bg-[#B07D54]/10 border border-[#B07D54]/30 border-dashed rounded-xl p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                          <div className="flex items-center gap-4">
+                            <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-xl shadow-sm">☕</div>
+                            <div>
+                              <h4 className="font-bold text-[#B07D54] uppercase tracking-widest text-sm">Almuerzo / Break Especialista</h4>
+                              <p className="text-xs text-stone-500 font-bold mt-1 tracking-wider">✂️ BARBERO: {nombreBarbero || 'Desconocido'}</p>
+                            </div>
+                          </div>
+                          <span className="text-[10px] font-bold text-[#161616] uppercase tracking-widest bg-[#B07D54]/20 px-3 py-1.5 rounded-md whitespace-nowrap">
+                            🔒 Oculto en Web
+                          </span>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                }
+
+                // === LÓGICA VISUAL NORMAL PARA CITAS REALES ===
                 const isAdelantado = cita.estado_pago === 'adelantado';
                 const isPagado = cita.estado_pago === 'pagado';
                 const isYapePorVerificar = cita.metodo_pago === 'Yape Anticipado' && cita.estado_pago === 'pendiente';
-                
-                const nombreBarbero = Array.isArray(cita.barbero) ? cita.barbero[0]?.nombre : cita.barbero?.nombre;
-                const nombreSede = Array.isArray(cita.sede) ? cita.sede[0]?.nombre : cita.sede?.nombre;
                 
                 const listaServiciosRaw = Array.isArray(cita.cita_servicios) ? cita.cita_servicios : [];
                 let sumaServicios = 0;
@@ -365,7 +405,6 @@ export default function AgendaView({ citasRaw, sedes, userProfile, cargarDatos, 
                               const faltaCobrar = totalACobrarFinal - (Number(cita.monto_adelantado) || 0);
 
                               if (faltaCobrar <= 0) {
-                                // BOTÓN QUE ACTIVA EL NUEVO MODAL ELEGANTE
                                 return (
                                   <button 
                                     onClick={() => setCitaAFinalizar(cita)}
@@ -437,8 +476,8 @@ export default function AgendaView({ citasRaw, sedes, userProfile, cargarDatos, 
               })}
               {citasDelDia.length === 0 && <tr><td colSpan={4} className="p-10 text-center text-stone-500 font-medium">No hay agenda para este día.</td></tr>}
             </tbody>
-          </table>
-        </div>
+        </table>
       </div>
+    </div>
   );
 }

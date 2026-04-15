@@ -69,7 +69,8 @@ export default function SedeDetalle() {
         const { data: barberosData } = await supabase
           .from('barberos')
           .select('*')
-          .eq('sede_id', sedeData.id);
+          .eq('sede_id', sedeData.id)
+          .eq('activo', true);
 
         if (barberosData) {
           const barberosHibridos = barberosData.map((b: any, i: number) => ({
