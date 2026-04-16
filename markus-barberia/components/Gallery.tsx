@@ -69,16 +69,21 @@ export default function Gallery() {
             ))}
           </div>
 
-          {/* GRILLA DE IMÁGENES (PINTEREST STYLE: 2 en móvil, 3 en tablet, 4 en PC) */}
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6 lg:gap-8">
+          {/* 🔥 INDICADOR DE SCROLL CENTRADO 🔥 */}
+          <div className="md:hidden flex items-center justify-center w-full gap-3 text-[#B07D54] mb-6 animate-pulse">
+            <span className="text-[10px] font-bold uppercase tracking-widest">← Desliza para ver más →</span>
+          </div>
+
+          {/* GRILLA DE IMÁGENES -> ENCUADRE PERFECTO EN MÓVIL */}
+          <div className="flex md:grid overflow-x-auto md:overflow-x-visible snap-x snap-mandatory md:snap-none gap-4 md:grid-cols-3 lg:grid-cols-4 md:gap-6 lg:gap-8 pb-6 md:pb-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
             {filteredImages.map((item, index) => (
               <div 
                 key={item.id} 
-                className="group aspect-[4/5] sm:aspect-square overflow-hidden rounded-xl md:rounded-2xl bg-[#161616] relative cursor-pointer shadow-lg border border-stone-800 transition-all duration-500 hover:border-[#B07D54]/50"
+                // Usamos w-[85%] y aspect-square en móvil para que no sea tan gigante
+                className="shrink-0 w-[85%] sm:w-[50vw] md:w-auto snap-center snap-always group aspect-square md:aspect-[4/5] overflow-hidden rounded-2xl bg-[#161616] relative cursor-pointer shadow-lg border border-stone-800 transition-all duration-500 hover:border-[#B07D54]/50"
                 data-aos="fade-up"
                 data-aos-delay={index * 100}
               >
-                {/* Imagen */}
                 <img 
                   src={item.src} 
                   alt={item.alt}
@@ -86,11 +91,9 @@ export default function Gallery() {
                   loading="lazy"
                 />
                 
-                {/* Hover: Overlay de gradiente cobre y textos */}
-                {/* En móvil el gradiente siempre se ve un poco, en PC es puro hover */}
-                <div className="absolute inset-0 bg-gradient-to-t from-[#161616]/95 via-[#161616]/40 to-transparent opacity-80 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-500 flex flex-col justify-end p-3 sm:p-4 md:p-6">
-                  <span className="text-[#B07D54] text-[8px] sm:text-[10px] font-bold uppercase tracking-widest mb-0.5 sm:mb-1 truncate">{item.sede}</span>
-                  <span className="text-white font-serif text-sm sm:text-base md:text-xl truncate">{item.alt}</span>
+                <div className="absolute inset-0 bg-gradient-to-t from-[#161616]/95 via-[#161616]/40 to-transparent opacity-80 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-500 flex flex-col justify-end p-5 md:p-6">
+                  <span className="text-[#B07D54] text-[10px] font-bold uppercase tracking-widest mb-1 truncate">{item.sede}</span>
+                  <span className="text-white font-serif text-xl md:text-xl truncate">{item.alt}</span>
                 </div>
               </div>
             ))}

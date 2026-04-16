@@ -48,10 +48,10 @@ export default function ServicesSection({ onOpenReservations }: { onOpenReservat
   const currentImage = activeCategory?.image || "/navaja.png";
 
   return (
-    <section id="servicios" className="py-24 bg-[#FDFBF7] px-4 md:px-8">
+    <section id="servicios" className="py-12 md:py-24 bg-[#FDFBF7] px-4 md:px-8">
       
       {/* Contenedor Principal: flex-col en móvil, lg:flex-row en desktop */}
-      <div className="max-w-7xl mx-auto bg-[#161616] rounded-[2rem] p-6 sm:p-8 md:p-12 lg:p-16 flex flex-col lg:flex-row gap-8 lg:gap-20 shadow-2xl overflow-hidden relative">
+      <div className="max-w-7xl mx-auto bg-[#161616] rounded-3xl md:rounded-[2rem] p-5 sm:p-8 md:p-12 lg:p-16 flex flex-col lg:flex-row gap-6 lg:gap-20 shadow-2xl relative">
         
         <div className="flex-1 flex flex-col">
           
@@ -83,32 +83,37 @@ export default function ServicesSection({ onOpenReservations }: { onOpenReservat
             ))}
           </div>
 
-          {/* 3. LISTA DE SERVICIOS OPTIMIZADA */}
-          <div className="flex flex-col">
+          {/* 🔥 INDICADOR DE SCROLL (SOLO MÓVIL) CENTRADO 🔥 */}
+          <div className="md:hidden flex items-center justify-center gap-2 text-stone-500 mb-4 animate-pulse w-full">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 8l4 4-4 4M7 16l-4-4 4-4"/></svg>
+            <span className="text-[10px] font-bold uppercase tracking-widest">Desliza los servicios</span>
+          </div>  
+
+          {/* 3. LISTA DE SERVICIOS -> CENTRADO PERFECTO EN MÓVIL */}
+          {/* Usamos scroll-px-4 para que el snap-start se detenga con un margen elegante */}
+          <div key={activeTab} className="flex md:flex-col overflow-x-auto md:overflow-visible snap-x snap-mandatory md:snap-none gap-4 md:gap-0 pb-4 md:pb-0 scroll-px-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
             {servicesData[activeTab]?.map((service, index) => (
               <div 
                 key={index} 
                 onClick={onOpenReservations} 
-                /* En celular muy pequeño (sm), el precio baja. En intermedio, se alinea a la derecha. */
-                className="group flex flex-col sm:flex-row sm:items-center justify-between py-5 md:py-6 border-b border-stone-800 cursor-pointer hover:border-stone-500 transition-colors gap-3 sm:gap-0" 
+                // Usamos w-[88%] y snap-center para que quede perfectamente al medio de la pantalla
+                className="shrink-0 w-[88%] sm:w-[60vw] md:w-full snap-center snap-always group flex flex-col md:flex-row md:items-center justify-between p-6 md:p-0 md:py-6 bg-[#1A1A1A] md:bg-transparent rounded-2xl md:rounded-none border border-stone-800 md:border-0 md:border-b md:border-stone-800 cursor-pointer hover:border-[#B07D54] md:hover:border-stone-500 transition-colors gap-4 md:gap-0 shadow-lg md:shadow-none relative" 
                 data-aos="fade-up" 
                 data-aos-delay={index * 100}
               >
-                <div className="flex flex-col md:flex-row md:items-center gap-1 md:gap-8 flex-1">
-                  <h3 className="font-serif text-lg md:text-2xl text-white uppercase group-hover:text-[#B07D54] transition-colors md:w-1/2">
+                <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-8 flex-1">
+                  <h3 className="font-serif text-2xl text-white uppercase group-hover:text-[#B07D54] transition-colors md:w-1/2">
                     {service.title}
                   </h3>
-                  <div className="flex flex-col text-[10px] md:text-[11px] text-stone-400 md:w-1/2">
+                  <div className="flex flex-col text-[11px] text-stone-400 md:w-1/2">
                     <span className="text-stone-300 font-semibold mb-1 tracking-widest uppercase">{service.time} | DETALLES</span>
-                    {/* Quitamos el uppercase de la descripción para mejorar legibilidad móvil */}
                     <span className="leading-relaxed normal-case tracking-normal">{service.desc}</span>
                   </div>
                 </div>
                 
-                <div className="flex items-center gap-3 sm:justify-end">
-                  {/* Punto decorativo oculto en celular pequeño para ahorrar espacio */}
+                <div className="flex items-center gap-3 sm:justify-end mt-2 md:mt-0">
                   <span className="hidden sm:block w-1.5 h-1.5 rounded-full bg-[#B07D54]"></span>
-                  <span className="text-xl md:text-3xl font-serif text-white group-hover:text-[#B07D54] transition-colors whitespace-nowrap">
+                  <span className="text-2xl md:text-3xl font-serif text-white group-hover:text-[#B07D54] transition-colors whitespace-nowrap">
                     {service.price}
                   </span>
                 </div>
