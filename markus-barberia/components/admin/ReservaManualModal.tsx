@@ -3,10 +3,10 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabase";
 
-export default function ReservaManualModal({ isOpen, onClose, sedes, barberos, cargarDatos }: any) {
+export default function ReservaManualModal({ isOpen, onClose, sedes, barberos, cargarDatos, userProfile }: any) {
   const [serviciosDB, setServiciosDB] = useState<any[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false); // 🔥 NUEVO ESTADO PARA EL MENSAJE DE ÉXITO
+  const [showSuccess, setShowSuccess] = useState(false);
 
   // Estados del Formulario
   const [sedeId, setSedeId] = useState("");
@@ -17,27 +17,50 @@ export default function ReservaManualModal({ isOpen, onClose, sedes, barberos, c
   const [clienteCelular, setClienteCelular] = useState("");
   const [serviciosSeleccionados, setServiciosSeleccionados] = useState<number[]>([]);
 
-  // Cargar servicios al abrir
+  const getTodayString = () => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  };
+
+  // Cargar servicios y configurar Sede al abrir
   useEffect(() => {
     if (isOpen) {
-      setShowSuccess(false); // Reiniciamos la pantalla de éxito al abrir
+      setShowSuccess(false); 
+      setFecha(getTodayString()); // Preselecciona hoy por defecto
+      
+      // 🔥 LÓGICA DE SEDE AUTOMÁTICA 🔥
+      if (userProfile?.tipo === "sede") {
+        setSedeId(userProfile.refId.toString());
+      }
+
       const fetchServicios = async () => {
         const { data } = await supabase.from('servicios').select('*').order('id', { ascending: true });
         if (data) setServiciosDB(data);
       };
       fetchServicios();
     } else {
-      // Limpiar formulario al cerrar
       setSedeId(""); setBarberoId(""); setFecha(""); setHora(""); 
       setClienteNombre(""); setClienteCelular(""); setServiciosSeleccionados([]);
       setShowSuccess(false);
     }
-  }, [isOpen]);
+  }, [isOpen, userProfile]);
 
+  // 🔥 LÓGICA DE HORAS PASADAS 🔥
   const generarOpcionesHora = () => {
     const opciones = [];
+    const now = new Date();
+    const isToday = fecha === getTodayString();
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
     for (let i = 8; i <= 22; i++) {
       for (let j = 0; j < 60; j += 30) {
+        
+        // Si es hoy, omite las horas que ya pasaron
+        if (isToday) {
+          const optionMinutes = i * 60 + j;
+          if (optionMinutes <= currentMinutes) continue;
+        }
+
         const hora24 = i.toString().padStart(2, '0');
         const min = j.toString().padStart(2, '0');
         const ampm = i >= 12 ? 'PM' : 'AM';
@@ -64,7 +87,6 @@ export default function ReservaManualModal({ isOpen, onClose, sedes, barberos, c
 
     setIsSubmitting(true);
     try {
-      // 1. Calcular Totales
       let montoTotal = 0;
       let duracionTotal = 0;
       serviciosSeleccionados.forEach(id => {
@@ -75,31 +97,63 @@ export default function ReservaManualModal({ isOpen, onClose, sedes, barberos, c
         }
       });
 
-      // 2. Formatear Fecha ISO
-      const isoDate = new Date(`${fecha}T${hora}:00`).toISOString();
+      const isoDate = new Date(`${fecha}T${hora}:00`);
+      const isoDateString = isoDate.toISOString();
 
-      // 3. Insertar en 'citas'
+      // 🔥 ALGORITMO ANTI-CHOQUES (DOUBLE BOOKING) 🔥
+      const inicioMinNuevo = isoDate.getHours() * 60 + isoDate.getMinutes();
+      const finMinNuevo = inicioMinNuevo + duracionTotal;
+
+      const { data: citasExistentes } = await supabase
+        .from('citas')
+        .select('fecha_hora, duracion_total_minutos')
+        .eq('barbero_id', Number(barberoId))
+        .neq('estado', 'cancelada');
+
+      if (citasExistentes) {
+        const hayChoque = citasExistentes.some(cita => {
+          const citaDate = new Date(cita.fecha_hora);
+          const citaDateStr = `${citaDate.getFullYear()}-${String(citaDate.getMonth() + 1).padStart(2, '0')}-${String(citaDate.getDate()).padStart(2, '0')}`;
+          
+          // Solo revisamos si la cita cae en el mismo día
+          if (citaDateStr === fecha) {
+            const inicioExistente = citaDate.getHours() * 60 + citaDate.getMinutes();
+            const finExistente = inicioExistente + (cita.duracion_total_minutos || 30);
+            
+            // Lógica de cruce de rangos
+            return (inicioMinNuevo < finExistente) && (finMinNuevo > inicioExistente);
+          }
+          return false;
+        });
+
+        if (hayChoque) {
+          alert("¡Ups! El especialista ya tiene una reserva o un bloqueo en ese horario. Por favor elige otra hora.");
+          setIsSubmitting(false);
+          return; // Detiene el guardado
+        }
+      }
+
+      // Si pasa la validación, insertamos la cita
       const { data: nuevaCita, error: errorCita } = await supabase.from('citas').insert({
         sede_id: Number(sedeId),
         barbero_id: Number(barberoId),
-        fecha_hora: isoDate,
+        fecha_hora: isoDateString,
         cliente_nombre: clienteNombre,
-        cliente_apellido: "", // Lo dejamos vacío
+        cliente_apellido: "", 
         cliente_celular: clienteCelular || "000000000",
-        cliente_correo: "whatsapp@manual.com", // Firma interna
+        cliente_correo: "whatsapp@manual.com",
         acepta_promociones: false,
         estado: "Confirmada",
         duracion_total_minutos: duracionTotal,
         monto_total: montoTotal,
         monto_cobrado: 0,
         monto_adelantado: 0,
-        metodo_pago: "WhatsApp", // Identificador
+        metodo_pago: "WhatsApp",
         estado_pago: "pendiente"
       }).select().single();
 
       if (errorCita) throw errorCita;
 
-      // 4. Insertar en 'cita_servicios'
       const relaciones = serviciosSeleccionados.map(srvId => ({
         cita_id: nuevaCita.id,
         servicio_id: srvId
@@ -108,12 +162,10 @@ export default function ReservaManualModal({ isOpen, onClose, sedes, barberos, c
       const { error: errorSrv } = await supabase.from('cita_servicios').insert(relaciones);
       if (errorSrv) throw errorSrv;
 
-      cargarDatos(); // Refrescar la agenda
-      
-      // 🔥 LÓGICA DE ÉXITO PREMIUM 🔥
-      setShowSuccess(true); // Mostramos el checkmark verde
+      cargarDatos(); 
+      setShowSuccess(true); 
       setTimeout(() => {
-        onClose(); // Cerramos el modal automáticamente después de 2 segundos
+        onClose(); 
       }, 2000);
 
     } catch (error: any) {
@@ -128,7 +180,6 @@ export default function ReservaManualModal({ isOpen, onClose, sedes, barberos, c
 
   const barberosDeSede = barberos.filter((b: any) => b.sede_id?.toString() === sedeId);
 
-  // 🔥 RENDERIZADO CONDICIONAL: PANTALLA DE ÉXITO 🔥
   if (showSuccess) {
     return (
       <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in">
@@ -143,12 +194,10 @@ export default function ReservaManualModal({ isOpen, onClose, sedes, barberos, c
     );
   }
 
-  // RENDERIZADO NORMAL: FORMULARIO
   return (
     <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in">
       <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden">
         
-        {/* Cabecera Verde WhatsApp */}
         <div className="bg-[#25D366] p-5 md:p-6 flex justify-between items-center shrink-0">
           <div className="flex items-center gap-3 text-white">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.463 1.065 2.876 1.213 3.074.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/></svg>
@@ -164,7 +213,8 @@ export default function ReservaManualModal({ isOpen, onClose, sedes, barberos, c
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-[10px] font-bold text-stone-500 uppercase tracking-widest mb-1.5">Sede</label>
-              <select aria-label="Seleccionar Sede" required value={sedeId} onChange={e => { setSedeId(e.target.value); setBarberoId(""); }} className="w-full border-2 border-stone-200 rounded-lg p-3 outline-none focus:border-[#25D366] text-sm font-medium bg-white">
+              {/* 🔥 BLOQUEO DE SEDE SI EL USUARIO ES TIPO "SEDE" 🔥 */}
+              <select aria-label="Seleccionar Sede" disabled={userProfile?.tipo === "sede"} required value={sedeId} onChange={e => { setSedeId(e.target.value); setBarberoId(""); }} className="w-full border-2 border-stone-200 rounded-lg p-3 outline-none focus:border-[#25D366] text-sm font-medium bg-white disabled:bg-stone-100 disabled:text-stone-500">
                 <option value="" disabled>Seleccione sede...</option>
                 {sedes.map((s: any) => <option key={s.id} value={s.id}>{s.nombre}</option>)}
               </select>
@@ -185,6 +235,7 @@ export default function ReservaManualModal({ isOpen, onClose, sedes, barberos, c
             </div>
             <div>
               <label className="block text-[10px] font-bold text-stone-500 uppercase tracking-widest mb-1.5">Hora</label>
+              {/* 🔥 HORAS DINÁMICAS 🔥 */}
               <select aria-label="Hora de Reserva" required value={hora} onChange={e => setHora(e.target.value)} className="w-full border-2 border-stone-200 rounded-lg p-3 outline-none focus:border-[#25D366] text-sm font-medium bg-white">
                 <option value="" disabled>--:--</option>
                 {generarOpcionesHora().map(op => <option key={op.value} value={op.value}>{op.label}</option>)}

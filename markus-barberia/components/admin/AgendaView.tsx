@@ -165,7 +165,14 @@ export default function AgendaView({ citasRaw, sedes, barberos = [], userProfile
     <div className="space-y-6 animate-fade-in">
       
       {/* === ZONA DE MODALES === */}
-      <ReservaManualModal isOpen={isReservaManualOpen} onClose={() => setIsReservaManualOpen(false)} sedes={sedes} barberos={barberos} cargarDatos={cargarDatos} />
+      <ReservaManualModal 
+        isOpen={isReservaManualOpen} 
+        onClose={() => setIsReservaManualOpen(false)} 
+        sedes={sedes} 
+        barberos={barberos} 
+        cargarDatos={cargarDatos} 
+        userProfile={userProfile} 
+      />
       {citaACobrar && <ChargeModal cita={citaACobrar} onClose={() => setCitaACobrar(null)} onConfirmarCobro={procesarCobro} />}
       
       {citaACancelar && (
