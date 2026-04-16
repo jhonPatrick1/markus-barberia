@@ -109,10 +109,11 @@ export default function Footer() {
         </div>
 
         {/* 4. BLOQUE INFERIOR Y COPYRIGHT */}
-        <div className="w-full border-t border-stone-800/60 mt-10 md:mt-16 pt-6 md:pt-8 flex flex-col sm:flex-row items-center justify-between gap-3 relative z-10">
+        <div className="w-full border-t border-stone-800/60 mt-10 md:mt-16 pt-6 md:pt-8 flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 relative z-10">
           <p className="text-stone-500 text-[10px] md:text-xs font-medium tracking-[0.2em] uppercase text-center">
             © 2026 Markus Barbería.
           </p>
+          <span className="hidden sm:block text-stone-700 font-light">|</span>
           <p className="text-stone-500 text-[10px] md:text-xs font-medium tracking-[0.2em] uppercase text-center">
             Todos los derechos reservados.
           </p>
