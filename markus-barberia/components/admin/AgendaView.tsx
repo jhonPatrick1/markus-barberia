@@ -3,12 +3,17 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabase";
 import ChargeModal from "./ChargeModal";
+import ReservaManualModal from "./ReservaManualModal";
 
 export default function AgendaView({ citasRaw, sedes, barberos = [], userProfile, cargarDatos, onLogout }: any) {
   const [citaACobrar, setCitaACobrar] = useState<any | null>(null);
   const [citaACancelar, setCitaACancelar] = useState<number | null>(null);
   const [citaAVerificarPago, setCitaAVerificarPago] = useState<any | null>(null); 
   const [citaAFinalizar, setCitaAFinalizar] = useState<any | null>(null);
+  
+  // 🔥 ESTADO NUEVO MODAL RESERVA MANUAL 🔥
+  const [isReservaManualOpen, setIsReservaManualOpen] = useState(false);
+
   const [isCanceling, setIsCanceling] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
 
@@ -123,7 +128,6 @@ export default function AgendaView({ citasRaw, sedes, barberos = [], userProfile
   };
   const irAHoy = () => setFechaSeleccionada(getLocalYYYYMMDD(new Date()));
 
-  // FUNCIONES DE FORMATEO DE TIEMPO
   const formatDuracionTexto = (mins: number) => {
     if (mins >= 60) {
       const h = Math.floor(mins / 60);
@@ -161,15 +165,17 @@ export default function AgendaView({ citasRaw, sedes, barberos = [], userProfile
     <div className="space-y-6 animate-fade-in">
       
       {/* === ZONA DE MODALES === */}
+      <ReservaManualModal isOpen={isReservaManualOpen} onClose={() => setIsReservaManualOpen(false)} sedes={sedes} barberos={barberos} cargarDatos={cargarDatos} />
       {citaACobrar && <ChargeModal cita={citaACobrar} onClose={() => setCitaACobrar(null)} onConfirmarCobro={procesarCobro} />}
+      
       {citaACancelar && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="bg-white p-6 md:p-8 rounded-2xl shadow-2xl max-w-sm w-full text-center">
             <h3 className="text-xl font-bold text-gray-900 mb-2">¿Cancelar reserva?</h3>
             <p className="text-gray-500 text-sm mb-6">El horario volverá a estar disponible.</p>
             <div className="flex gap-3">
-              <button onClick={() => setCitaACancelar(null)} disabled={isCanceling} className="flex-1 py-3 rounded-lg font-bold text-sm bg-gray-100 text-gray-700">No, mantener</button>
-              <button onClick={ejecutarCancelacion} disabled={isCanceling} className="flex-1 py-3 rounded-lg font-bold text-sm bg-red-500 text-white">{isCanceling ? "Borrando..." : "Sí, cancelar"}</button>
+              <button type="button" onClick={() => setCitaACancelar(null)} disabled={isCanceling} className="flex-1 py-3 rounded-lg font-bold text-sm bg-gray-100 text-gray-700">No, mantener</button>
+              <button type="button" onClick={ejecutarCancelacion} disabled={isCanceling} className="flex-1 py-3 rounded-lg font-bold text-sm bg-red-500 text-white">{isCanceling ? "Borrando..." : "Sí, cancelar"}</button>
             </div>
           </div>
         </div>
@@ -184,8 +190,8 @@ export default function AgendaView({ citasRaw, sedes, barberos = [], userProfile
             <h3 className="text-xl font-bold text-gray-900 mb-2 font-serif uppercase tracking-widest">¿Terminaste el corte?</h3>
             <p className="text-gray-500 text-sm mb-6">Confirma que finalizaste el servicio. Esto sumará la producción a tu ranking personal de manera automática.</p>
             <div className="flex gap-3">
-              <button onClick={() => setCitaAFinalizar(null)} className="flex-1 py-3 rounded-xl font-bold text-xs uppercase tracking-widest bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors">Cancelar</button>
-              <button onClick={ejecutarFinalizacion} className="flex-1 py-3 rounded-xl font-bold text-xs uppercase tracking-widest bg-emerald-500 text-white hover:bg-emerald-600 transition-colors shadow-lg shadow-emerald-500/30">Sí, Finalizar</button>
+              <button type="button" onClick={() => setCitaAFinalizar(null)} className="flex-1 py-3 rounded-xl font-bold text-xs uppercase tracking-widest bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors">Cancelar</button>
+              <button type="button" onClick={ejecutarFinalizacion} className="flex-1 py-3 rounded-xl font-bold text-xs uppercase tracking-widest bg-emerald-500 text-white hover:bg-emerald-600 transition-colors shadow-lg shadow-emerald-500/30">Sí, Finalizar</button>
             </div>
           </div>
         </div>
@@ -235,8 +241,8 @@ export default function AgendaView({ citasRaw, sedes, barberos = [], userProfile
             </div>
 
             <div className="flex gap-3">
-              <button onClick={() => setCitaAVerificarPago(null)} disabled={isVerifying} className="flex-1 py-3 rounded-lg font-bold text-sm bg-gray-100 text-gray-700">Cancelar</button>
-              <button onClick={procesarVerificacionPago} disabled={isVerifying} className="flex-1 py-3 rounded-lg font-bold text-sm bg-emerald-500 text-white shadow-lg">{isVerifying ? "Guardando..." : "Guardar Pago"}</button>
+              <button type="button" onClick={() => setCitaAVerificarPago(null)} disabled={isVerifying} className="flex-1 py-3 rounded-lg font-bold text-sm bg-gray-100 text-gray-700">Cancelar</button>
+              <button type="button" onClick={procesarVerificacionPago} disabled={isVerifying} className="flex-1 py-3 rounded-lg font-bold text-sm bg-emerald-500 text-white shadow-lg">{isVerifying ? "Guardando..." : "Guardar Pago"}</button>
             </div>
           </div>
         </div>
@@ -249,28 +255,40 @@ export default function AgendaView({ citasRaw, sedes, barberos = [], userProfile
              <h1 className="text-3xl font-bold font-serif tracking-tighter uppercase">MARKUS</h1>
              <p className="text-stone-500 text-sm mt-1 font-medium">Mi Agenda Personal</p>
            </div>
-           <div className="flex gap-3">
-             <button onClick={cargarDatos} className="text-stone-500 hover:text-black font-medium text-sm px-4 py-2 border border-stone-200 rounded-lg whitespace-nowrap">🔄 Refrescar</button>
-             <button onClick={onLogout} className="text-stone-500 hover:text-red-600 font-medium text-sm px-4 py-2 border border-stone-200 rounded-lg whitespace-nowrap">Cerrar Sesión</button>
+           <div className="flex gap-3 flex-wrap">
+             <button type="button" onClick={cargarDatos} className="text-stone-500 hover:text-black font-medium text-sm px-4 py-2 border border-stone-200 rounded-lg whitespace-nowrap">🔄 Refrescar</button>
+             <button type="button" onClick={onLogout} className="text-stone-500 hover:text-red-600 font-medium text-sm px-4 py-2 border border-stone-200 rounded-lg whitespace-nowrap">Cerrar Sesión</button>
            </div>
          </div>
       )}
 
-      {/* CONTROLES SUPERIORES (Fecha y Sede) */}
-      <div className="bg-white p-4 rounded-xl shadow-sm border border-stone-200 flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-2">
-          <button onClick={() => cambiarDia(-1)} className="px-4 py-2 border border-stone-200 rounded-lg text-sm font-medium hover:bg-stone-50 whitespace-nowrap">◀ Anterior</button>
-          <button onClick={irAHoy} className="px-4 py-2 bg-black text-white rounded-lg text-sm font-bold whitespace-nowrap">Hoy</button>
-          <button onClick={() => cambiarDia(1)} className="px-4 py-2 border border-stone-200 rounded-lg text-sm font-medium hover:bg-stone-50 whitespace-nowrap">Siguiente ▶</button>
+      {/* CONTROLES SUPERIORES (Fecha, Sede y NUEVA RESERVA) */}
+      <div className="bg-white p-4 rounded-xl shadow-sm border border-stone-200 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        
+        <div className="flex items-center gap-2 w-full md:w-auto">
+          <button type="button" onClick={() => cambiarDia(-1)} className="flex-1 md:flex-none px-4 py-2 border border-stone-200 rounded-lg text-sm font-medium hover:bg-stone-50 whitespace-nowrap">◀ Ant</button>
+          <button type="button" onClick={irAHoy} className="flex-1 md:flex-none px-4 py-2 bg-black text-white rounded-lg text-sm font-bold whitespace-nowrap">Hoy</button>
+          <button type="button" onClick={() => cambiarDia(1)} className="flex-1 md:flex-none px-4 py-2 border border-stone-200 rounded-lg text-sm font-medium hover:bg-stone-50 whitespace-nowrap">Sig ▶</button>
         </div>
-        <div className="flex flex-wrap items-center gap-4 w-full md:w-auto">
+
+        <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
           {userProfile.tipo === "master" && (
-            <select aria-label="Filtro Sede" value={filtroSedeMaster} onChange={(e) => setFiltroSedeMaster(e.target.value)} className="border-2 border-stone-200 rounded-lg p-2 text-sm outline-none cursor-pointer bg-white w-full md:w-auto">
+            <select aria-label="Filtro Sede" value={filtroSedeMaster} onChange={(e) => setFiltroSedeMaster(e.target.value)} className="border-2 border-stone-200 rounded-lg p-2 text-sm outline-none cursor-pointer bg-white w-full sm:w-auto">
               <option value="todas">Todas las sedes</option>
               {sedes.map((sede: any) => <option key={sede.id} value={sede.id.toString()}>{sede.nombre}</option>)}
             </select>
           )}
-          <input aria-label="Fecha" type="date" value={fechaSeleccionada} onChange={(e) => setFechaSeleccionada(e.target.value)} className="border-2 border-stone-200 rounded-lg p-2 text-sm outline-none cursor-pointer w-full md:w-auto"/>
+          <input aria-label="Fecha" type="date" value={fechaSeleccionada} onChange={(e) => setFechaSeleccionada(e.target.value)} className="border-2 border-stone-200 rounded-lg p-2 text-sm outline-none cursor-pointer w-full sm:w-auto"/>
+          
+          {/* 🔥 BOTÓN NUEVA RESERVA 🔥 */}
+          <button 
+            type="button"
+            onClick={() => setIsReservaManualOpen(true)} 
+            className="w-full sm:w-auto bg-[#25D366] text-white hover:bg-[#1EBE5D] shadow-sm font-bold text-[11px] uppercase tracking-widest px-5 py-2.5 rounded-lg whitespace-nowrap flex items-center justify-center gap-2 transition-all"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.463 1.065 2.876 1.213 3.074.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/></svg>
+            + Nueva Reserva
+          </button>
         </div>
       </div>
 
@@ -332,7 +350,7 @@ export default function AgendaView({ citasRaw, sedes, barberos = [], userProfile
                 
                 const isBloqueo = cita.cliente_nombre === "BLOQUEO";
 
-                // 🔥 LÓGICA MATEMÁTICA PARA LA HORA DE FIN Y DURACIÓN 🔥
+                // LÓGICA MATEMÁTICA PARA LA HORA DE FIN Y DURACIÓN
                 let sumaDuracionServicios = 0;
                 let sumaServicios = 0;
                 const listaServiciosRaw = Array.isArray(cita.cita_servicios) ? cita.cita_servicios : [];
@@ -352,7 +370,7 @@ export default function AgendaView({ citasRaw, sedes, barberos = [], userProfile
                 const horaFinStr = fechaFin.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
                 const duracionLegible = formatDuracionTexto(duracionFinalMinutos);
 
-                // 🔥 LÓGICA VISUAL EXCLUSIVA PARA EL BLOQUEO (FANTASMA) 🔥
+                // VISUAL EXCLUSIVA PARA EL BLOQUEO (FANTASMA)
                 if (isBloqueo) {
                   return (
                     <tr key={cita.id} className="bg-[#B07D54]/5 hover:bg-[#B07D54]/10 transition-colors">
@@ -381,10 +399,11 @@ export default function AgendaView({ citasRaw, sedes, barberos = [], userProfile
                   );
                 }
 
-                // === LÓGICA VISUAL NORMAL PARA CITAS REALES ===
+                // === VISUAL NORMAL PARA CITAS REALES ===
                 const isAdelantado = cita.estado_pago === 'adelantado';
                 const isPagado = cita.estado_pago === 'pagado';
                 const isYapePorVerificar = cita.metodo_pago === 'Yape Anticipado' && cita.estado_pago === 'pendiente';
+                const isWhatsApp = cita.metodo_pago === 'WhatsApp'; // 🔥 Identificador
                 const totalACobrarFinal = Number(cita.monto_total || sumaServicios);
 
                 return (
@@ -403,7 +422,16 @@ export default function AgendaView({ citasRaw, sedes, barberos = [], userProfile
                     </td>
 
                     <td className="p-4 align-top">
-                      <div className="font-bold text-sm text-stone-900 mt-1 whitespace-nowrap">{cita.cliente_nombre} {cita.cliente_apellido}</div>
+                      <div className="font-bold text-sm text-stone-900 mt-1 flex flex-col md:flex-row md:items-center gap-2 whitespace-nowrap">
+                        {cita.cliente_nombre} {cita.cliente_apellido}
+                        {/* 🔥 PLACA WHATSAPP 🔥 */}
+                        {isWhatsApp && (
+                          <span title="Reserva Manual por WhatsApp" className="bg-[#25D366]/10 text-[#1EBE5D] border border-[#25D366]/30 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-widest flex items-center gap-1 w-fit">
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.463 1.065 2.876 1.213 3.074.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/></svg>
+                            WhatsApp
+                          </span>
+                        )}
+                      </div>
                       <div className="text-xs text-stone-500 mt-0.5 whitespace-nowrap">{cita.cliente_celular}</div>
                     </td>
                     <td className="p-4 align-top">
@@ -461,7 +489,7 @@ export default function AgendaView({ citasRaw, sedes, barberos = [], userProfile
 
                               if (faltaCobrar <= 0) {
                                 return (
-                                  <button 
+                                  <button type="button" 
                                     onClick={() => setCitaAFinalizar(cita)}
                                     className="text-emerald-700 bg-emerald-100 border border-emerald-400 hover:bg-emerald-500 hover:text-white w-full py-2 rounded-lg text-[11px] font-bold transition-all shadow-sm uppercase tracking-widest whitespace-nowrap"
                                   >
@@ -470,7 +498,7 @@ export default function AgendaView({ citasRaw, sedes, barberos = [], userProfile
                                 );
                               } else {
                                 return (
-                                  <button 
+                                  <button type="button" 
                                     onClick={() => setCitaACobrar(cita)} 
                                     className="text-white bg-black hover:bg-stone-800 whitespace-nowrap w-full py-2 rounded-lg text-[10px] font-bold transition-all shadow-sm uppercase tracking-widest"
                                   >
@@ -493,7 +521,7 @@ export default function AgendaView({ citasRaw, sedes, barberos = [], userProfile
 
                                 if (faltaCobrar <= 0) {
                                   return (
-                                    <button 
+                                    <button type="button" 
                                       onClick={() => setCitaAFinalizar(cita)}
                                       className="w-full text-emerald-700 hover:text-white border border-emerald-400 hover:bg-emerald-500 px-2 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all shadow-sm whitespace-nowrap"
                                     >
@@ -502,7 +530,7 @@ export default function AgendaView({ citasRaw, sedes, barberos = [], userProfile
                                   );
                                 } else {
                                   return (
-                                    <button 
+                                    <button type="button" 
                                       onClick={() => setCitaACobrar(cita)} 
                                       className="w-full text-stone-700 hover:text-white border border-stone-400 hover:bg-stone-800 px-2 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all shadow-sm whitespace-nowrap"
                                     >
@@ -513,10 +541,10 @@ export default function AgendaView({ citasRaw, sedes, barberos = [], userProfile
                               })()}
 
                               <div className="flex gap-2 justify-center w-full">
-                                <button onClick={() => abrirModalVerificacion(cita)} className="flex-1 text-emerald-700 hover:text-white border border-emerald-300 hover:border-emerald-500 hover:bg-emerald-500 px-2 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all shadow-sm whitespace-nowrap">
+                                <button type="button" onClick={() => abrirModalVerificacion(cita)} className="flex-1 text-emerald-700 hover:text-white border border-emerald-300 hover:border-emerald-500 hover:bg-emerald-500 px-2 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all shadow-sm whitespace-nowrap">
                                   Verificar ✓
                                 </button>
-                                <button onClick={() => setCitaACancelar(cita.id)} className="flex-1 text-red-500 hover:text-white border border-red-200 hover:border-red-500 hover:bg-red-500 px-2 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all shadow-sm whitespace-nowrap">
+                                <button type="button" onClick={() => setCitaACancelar(cita.id)} className="flex-1 text-red-500 hover:text-white border border-red-200 hover:border-red-500 hover:bg-red-500 px-2 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all shadow-sm whitespace-nowrap">
                                   Cancelar ✕
                                 </button>
                               </div>
