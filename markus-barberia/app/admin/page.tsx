@@ -1,6 +1,5 @@
 "use client";
 
-// Esto es un cambio real
 import { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabase"; 
 import Sidebar from "../../components/admin/Sidebar";
@@ -18,22 +17,37 @@ export default function AdminDashboard() {
   const [password, setPassword] = useState("");
   const [errorLogin, setErrorLogin] = useState("");
   const [activeView, setActiveView] = useState<'agenda' | 'finanzas' | 'gestion'>('agenda');
+  
+  // Estados de carga blindados
   const [isCheckingSession, setIsCheckingSession] = useState(true); 
   const [isLoggingIn, setIsLoggingIn] = useState(false); 
+  
   const [listaBarberos, setListaBarberos] = useState<any[]>([]);
-
   const [citas, setCitas] = useState<any[]>([]);
   const [sedes, setSedes] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  // 🔥 1. BLINDAJE EN LA CARGA INICIAL 🔥
   useEffect(() => {
     const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        asignarPerfilPorEmail(session.user.email);
-        setIsAuthenticated(true);
+      try {
+        if (!supabase || !supabase.auth) {
+          throw new Error("Cliente de base de datos no disponible.");
+        }
+        
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error) throw error;
+
+        if (session) {
+          asignarPerfilPorEmail(session.user.email);
+          setIsAuthenticated(true);
+        }
+      } catch (err) {
+        console.error("Error silencioso al verificar sesión inicial:", err);
+      } finally {
+        // PASE LO QUE PASE, la pantalla negra desaparece
+        setIsCheckingSession(false);
       }
-      setIsCheckingSession(false);
     };
 
     checkSession();
@@ -82,20 +96,32 @@ export default function AdminDashboard() {
     else setUserProfile({ tipo: "sede", refId: 0 }); 
   };
 
+  // 🔥 2. BLINDAJE EN EL BOTÓN DE LOGIN 🔥
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorLogin("");
     setIsLoggingIn(true); 
+
     try {
+      if (!supabase || !supabase.auth) {
+        throw new Error("El cliente de la base de datos no está disponible. Verifica las variables de entorno.");
+      }
+
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) setErrorLogin("Credenciales incorrectas.");
-      else if (data.session) {
+      
+      if (error) {
+        setErrorLogin("Credenciales incorrectas o usuario no encontrado.");
+      } else if (data?.session) {
         asignarPerfilPorEmail(data.session.user.email);
         setIsAuthenticated(true);
       }
-    } catch (err) {
-      setErrorLogin("Hubo un error de conexión.");
+    } catch (err: any) {
+      console.error("Fallo crítico en Login:", err);
+      const mensajeCatastrofico = err.message || "Fallo crítico de red o configuración.";
+      setErrorLogin(mensajeCatastrofico);
+      alert("⚠️ Error del sistema: " + mensajeCatastrofico); 
     } finally {
+      // PASE LO QUE PASE, el botón se desbloquea
       setIsLoggingIn(false); 
     }
   };
@@ -121,7 +147,7 @@ export default function AdminDashboard() {
       .select(`*, barbero:barberos(nombre), sede:sedes(nombre), cita_servicios(servicios(nombre, precio))`)
       .order('fecha_hora', { ascending: true });
 
-    // 2. 🔥 FIX SEDE: Filtramos directo en la BD para mayor seguridad y velocidad
+    // 2. Filtramos directo en la BD para mayor seguridad y velocidad
     if (userProfile.tipo === "sede") {
       query = query.eq('sede_id', userProfile.refId);
     } else if (userProfile.tipo === "barbero") {
@@ -138,7 +164,6 @@ export default function AdminDashboard() {
     if (isAuthenticated) cargarDatos();
   }, [isAuthenticated]);
 
-  // 👇 BÚSQUEDA DINÁMICA DEL NOMBRE PARA LA CABECERA 👇
   const obtenerNombreVista = () => {
     if (userProfile.tipo === "master") return "Vista Master (Global)";
     if (userProfile.tipo === "sede") {
@@ -150,7 +175,9 @@ export default function AdminDashboard() {
 
   const nombreVista = obtenerNombreVista();
 
-  if (isCheckingSession) return <div className="min-h-screen bg-neutral-900 flex items-center justify-center text-white font-mono tracking-widest text-sm uppercase">Cargando Panel...</div>;
+  if (isCheckingSession) {
+    return <div className="min-h-screen bg-neutral-900 flex items-center justify-center text-white font-mono tracking-widest text-sm uppercase">Cargando Panel...</div>;
+  }
 
   if (!isAuthenticated) {
     return (
@@ -160,7 +187,7 @@ export default function AdminDashboard() {
           <form onSubmit={handleLogin} className="space-y-5">
             <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full border-2 border-stone-200 rounded-lg p-3 text-black outline-none focus:border-black" placeholder="Correo" required />
             <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full border-2 border-stone-200 rounded-lg p-3 text-black outline-none focus:border-black" placeholder="Contraseña" required />
-            {errorLogin && <p className="text-red-500 text-sm">{errorLogin}</p>}
+            {errorLogin && <p className="text-red-500 text-sm font-medium bg-red-50 p-3 rounded-lg border border-red-200">{errorLogin}</p>}
             <button type="submit" disabled={isLoggingIn} className="w-full bg-black text-white font-bold py-3 rounded-lg hover:bg-stone-800 disabled:opacity-50 transition-colors">
               {isLoggingIn ? "Verificando..." : "Ingresar"}
             </button>
@@ -197,7 +224,6 @@ export default function AdminDashboard() {
 
       <main className="flex-1 overflow-y-auto p-4 md:p-8 animate-fade-in">
         
-        {/* 👇 NUEVA CABECERA BLANCA 👇 */}
         <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-6 bg-white p-5 rounded-xl shadow-sm border border-stone-200">
           <div>
             <h2 className="text-xl font-bold font-serif text-stone-800 uppercase tracking-wide">{nombreVista}</h2>
@@ -211,7 +237,6 @@ export default function AdminDashboard() {
           </button>
         </div>
 
-        {/* 👇 AQUÍ ESTÁ LA LÓGICA DE VISTAS LIMPIA Y SIN DUPLICADOS 👇 */}
         {activeView === 'agenda' ? (
           <AgendaView 
             citasRaw={citas} 

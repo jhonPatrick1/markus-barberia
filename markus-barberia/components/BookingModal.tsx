@@ -327,6 +327,7 @@ export default function BookingModal({ isOpen, preSelection, onClose }: {
         }
       }
 
+      // 1. Inserción en Supabase
       const { data: nuevaCita, error: errorCita } = await supabase
         .from('citas')
         .insert({
@@ -347,7 +348,7 @@ export default function BookingModal({ isOpen, preSelection, onClose }: {
 
       if (errorCita) throw errorCita;
 
-      const relacionesServicios = selection.servicios.map(srv => ({
+      const relacionesServicios = selection.servicios.map((srv: any) => ({
         cita_id: nuevaCita.id,
         servicio_id: srv.id
       }));
@@ -358,6 +359,30 @@ export default function BookingModal({ isOpen, preSelection, onClose }: {
 
       if (errorServicios) throw errorServicios;
 
+      // 🔥 2. NOTIFICACIÓN POR CORREO (Fire and Forget) 🔥
+      try {
+        // Formateamos los servicios para que se vean bien en el correo
+        const nombresServicios = selection.servicios.map((s: any) => s.nombre).join(', ');
+
+        // Disparamos a nuestra nueva API sin esperar a que termine (sin bloquear la UI)
+        fetch('/api/send-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            barberoId: selection.barbero.id,
+            barberoNombre: selection.barbero.nombre,
+            clienteNombre: `${selection.nombre} ${selection.apellido}`,
+            fecha: selection.fecha,
+            hora: selection.hora,
+            servicios: nombresServicios,
+            montoTotal: montoTotal
+          })
+        });
+      } catch (emailError) {
+        console.error("Error silencioso al enviar correo:", emailError);
+      }
+
+      // 3. Pasamos al éxito
       setStep(7);
       
       if (isYape) {
