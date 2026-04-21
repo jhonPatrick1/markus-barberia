@@ -75,7 +75,7 @@ export default function AdminDashboard() {
 
     // Barberos - Pueblo Libre (Sede 1)
     else if (emailNeto === "yeampierpadilla@gmail.com") setUserProfile({ tipo: "barbero", refId: 1 }); 
-    else if (emailNeto === "jhonpatrickcg@gmail.com") setUserProfile({ tipo: "barbero", refId: 2 }); 
+    else if (emailNeto === "patrickm19992@gmail.com") setUserProfile({ tipo: "barbero", refId: 2 }); 
     else if (emailNeto === "Hanziel69barber@gmail.com") setUserProfile({ tipo: "barbero", refId: 3 }); 
     else if (emailNeto === "markus.barbero@markus.com") setUserProfile({ tipo: "barbero", refId: 4 }); 
     else if (emailNeto === "murayarihuaicamae@gmail.com") setUserProfile({ tipo: "barbero", refId: 15 });
