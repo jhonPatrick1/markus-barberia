@@ -6,10 +6,10 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 
 // El cerebro distribuidor: Mapea cada ID de barbero con su correo real
 const correosBarberos: Record<number, string> = {
-  1: "yeampier@markus.com", 2: "patrick@markus.com", 3: "hanziel@markus.com", 4: "markus.barbero@markus.com",
-  5: "gerson@markus.com", 6: "manuel@markus.com", 7: "alonso@markus.com", 8: "andres.cercado@markus.com",
-  9: "neymar@markus.com", 10: "ashly@markus.com", 11: "sebastian@markus.com", 12: "andres.magdalena@markus.com",
-  13: "luis@markus.com", 14: "richard@markus.com"
+  1: "yeampierpadilla@gmail.com", 2: "jhonpatrickcg@gmail.com", 3: "Hanziel69barber@gmail.com", 4: "markus.barbero@markus.com",
+  5: "Irigoinjerson@gmail.com", 6: "manuel@markus.com", 7: "Farfanchambad@gmail.com", 8: "romaynaandres42@gmail.com",
+  9: "luis.barber19@gmail.com", 10: "ashly@markus.com", 11: "sebastian@markus.com", 12: "andres.magdalena@markus.com",
+  13: "luis@markus.com", 14: "richard@markus.com", 15: "murayarihuaicamae@gmail.com"
 };
 
 export async function POST(request: Request) {

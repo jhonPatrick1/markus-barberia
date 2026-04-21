@@ -74,17 +74,17 @@ export default function AdminDashboard() {
     else if (emailNeto === "magdalena@markus.com") setUserProfile({ tipo: "sede", refId: 3 }); 
 
     // Barberos - Pueblo Libre (Sede 1)
-    else if (emailNeto === "yeampier@markus.com") setUserProfile({ tipo: "barbero", refId: 1 }); 
-    else if (emailNeto === "patrick@markus.com") setUserProfile({ tipo: "barbero", refId: 2 }); 
-    else if (emailNeto === "hanziel@markus.com") setUserProfile({ tipo: "barbero", refId: 3 }); 
+    else if (emailNeto === "yeampierpadilla@gmail.com") setUserProfile({ tipo: "barbero", refId: 1 }); 
+    else if (emailNeto === "jhonpatrickcg@gmail.com") setUserProfile({ tipo: "barbero", refId: 2 }); 
+    else if (emailNeto === "Hanziel69barber@gmail.com") setUserProfile({ tipo: "barbero", refId: 3 }); 
     else if (emailNeto === "markus.barbero@markus.com") setUserProfile({ tipo: "barbero", refId: 4 }); 
-
+    else if (emailNeto === "murayarihuaicamae@gmail.com") setUserProfile({ tipo: "barbero", refId: 15 });
     // Barberos - Cercado de Lima (Sede 2)
-    else if (emailNeto === "gerson@markus.com") setUserProfile({ tipo: "barbero", refId: 5 }); 
+    else if (emailNeto === "Irigoinjerson@gmail.com") setUserProfile({ tipo: "barbero", refId: 5 }); 
     else if (emailNeto === "manuel@markus.com") setUserProfile({ tipo: "barbero", refId: 6 }); 
-    else if (emailNeto === "alonso@markus.com") setUserProfile({ tipo: "barbero", refId: 7 }); 
-    else if (emailNeto === "andres.cercado@markus.com") setUserProfile({ tipo: "barbero", refId: 8 }); 
-    else if (emailNeto === "neymar@markus.com") setUserProfile({ tipo: "barbero", refId: 9 }); 
+    else if (emailNeto === "Farfanchambad@gmail.com") setUserProfile({ tipo: "barbero", refId: 7 }); 
+    else if (emailNeto === "romaynaandres42@gmail.com") setUserProfile({ tipo: "barbero", refId: 8 }); 
+    else if (emailNeto === "luis.barber19@gmail.com") setUserProfile({ tipo: "barbero", refId: 9 }); 
     else if (emailNeto === "ashly@markus.com") setUserProfile({ tipo: "barbero", refId: 10 }); 
 
     // Barberos - Magdalena (Sede 3)
