@@ -9,7 +9,7 @@ export default function ReservaManualModal({ isOpen, onClose, sedes, barberos, c
   
   // Estados de Interfaz Premium
   const [showSuccess, setShowSuccess] = useState(false);
-  const [errorMsg, setErrorMsg] = useState(""); // 🔥 NUEVO: Para mensajes de error elegantes
+  const [errorMsg, setErrorMsg] = useState(""); 
 
   // Estados del Formulario
   const [sedeId, setSedeId] = useState("");
@@ -20,7 +20,6 @@ export default function ReservaManualModal({ isOpen, onClose, sedes, barberos, c
   const [clienteCelular, setClienteCelular] = useState("");
   const [serviciosSeleccionados, setServiciosSeleccionados] = useState<number[]>([]);
 
-  // 🔥 NUEVO: Guardaremos las citas del barbero seleccionado para filtrar las horas
   const [citasDelBarbero, setCitasDelBarbero] = useState<any[]>([]);
 
   const getTodayString = () => {
@@ -28,7 +27,6 @@ export default function ReservaManualModal({ isOpen, onClose, sedes, barberos, c
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
   };
 
-  // Cargar servicios y configurar Sede al abrir
   useEffect(() => {
     if (isOpen) {
       setShowSuccess(false); 
@@ -53,7 +51,6 @@ export default function ReservaManualModal({ isOpen, onClose, sedes, barberos, c
     }
   }, [isOpen, userProfile]);
 
-  // 🔥 NUEVO EFECTO: Buscar citas cuando cambie el barbero o la fecha 🔥
   useEffect(() => {
     const fetchCitasBarbero = async () => {
       if (barberoId && fecha) {
@@ -64,7 +61,6 @@ export default function ReservaManualModal({ isOpen, onClose, sedes, barberos, c
           .neq('estado', 'cancelada');
         
         if (data) {
-          // Filtramos solo las que son del día seleccionado
           const citasDelDia = data.filter(c => c.fecha_hora.startsWith(fecha));
           setCitasDelBarbero(citasDelDia);
         }
@@ -75,7 +71,6 @@ export default function ReservaManualModal({ isOpen, onClose, sedes, barberos, c
     fetchCitasBarbero();
   }, [barberoId, fecha]);
 
-  // 🔥 GENERADOR DE HORAS INTELIGENTE (Filtra pasadas y bloqueadas) 🔥
   const generarOpcionesHora = () => {
     const opciones = [];
     const now = new Date();
@@ -86,23 +81,20 @@ export default function ReservaManualModal({ isOpen, onClose, sedes, barberos, c
       for (let j = 0; j < 60; j += 30) {
         const optionMinutes = i * 60 + j;
 
-        // 1. Omitir horas que ya pasaron hoy
         if (isToday && optionMinutes <= currentMinutes) continue;
 
-        // 2. Omitir horas donde el barbero ya tiene cita (o almuerzo)
         let estaOcupado = false;
         citasDelBarbero.forEach(cita => {
           const citaDate = new Date(cita.fecha_hora);
           const inicioCitaMin = citaDate.getHours() * 60 + citaDate.getMinutes();
           const finCitaMin = inicioCitaMin + (cita.duracion_total_minutos || 30);
           
-          // Si la opción de hora cae dentro de un bloque ocupado, se descarta
           if (optionMinutes >= inicioCitaMin && optionMinutes < finCitaMin) {
             estaOcupado = true;
           }
         });
 
-        if (estaOcupado) continue; // No agregamos la hora a la lista
+        if (estaOcupado) continue; 
 
         const hora24 = i.toString().padStart(2, '0');
         const min = j.toString().padStart(2, '0');
@@ -120,6 +112,8 @@ export default function ReservaManualModal({ isOpen, onClose, sedes, barberos, c
       prev.includes(id) ? prev.filter(sId => sId !== id) : [...prev, id]
     );
   };
+
+  const barberosDeSede = barberos.filter((b: any) => b.sede_id?.toString() === sedeId);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -143,7 +137,6 @@ export default function ReservaManualModal({ isOpen, onClose, sedes, barberos, c
       const isoDate = new Date(`${fecha}T${hora}:00`);
       const isoDateString = isoDate.toISOString();
 
-      // Validación final Anti-Choques por si alguien reservó al mismo tiempo
       const inicioMinNuevo = isoDate.getHours() * 60 + isoDate.getMinutes();
       const finMinNuevo = inicioMinNuevo + duracionTotal;
 
@@ -189,6 +182,37 @@ export default function ReservaManualModal({ isOpen, onClose, sedes, barberos, c
       const { error: errorSrv } = await supabase.from('cita_servicios').insert(relaciones);
       if (errorSrv) throw errorSrv;
 
+      // =========================================================
+      // 🔥 NUEVO: DISPARAR EL CORREO A TRAVÉS DE RESEND 🔥
+      // =========================================================
+      try {
+        // 1. Extraemos los nombres legibles de barbero y servicios para la plantilla
+        const barberoSeleccionado = barberosDeSede.find((b: any) => b.id.toString() === barberoId);
+        const nombresServicios = serviciosSeleccionados
+          .map(id => serviciosDB.find(s => s.id === id)?.nombre)
+          .filter(Boolean)
+          .join(', ');
+
+        // 2. Hacemos el llamado a tu API (Asegúrate de que la ruta sea correcta, asumo que es '/api/send')
+        await fetch('/api/send-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            barberoId: barberoId,
+            barberoNombre: barberoSeleccionado?.nombre || 'Especialista',
+            clienteNombre: `${clienteNombre} (Vía WhatsApp)`, // Agregamos "(Vía WhatsApp)" para que el barbero lo identifique
+            fecha: fecha,
+            hora: hora,
+            servicios: nombresServicios,
+            montoTotal: montoTotal
+          })
+        });
+      } catch (emailError) {
+        // Fallo silencioso: Si el correo falla, la cita igual está guardada. No rompemos la UI.
+        console.error("Error silencioso: La cita se guardó pero el correo falló.", emailError);
+      }
+      // =========================================================
+
       cargarDatos(); 
       setShowSuccess(true); 
       setTimeout(() => {
@@ -205,7 +229,6 @@ export default function ReservaManualModal({ isOpen, onClose, sedes, barberos, c
 
   if (!isOpen) return null;
 
-  // 🔥 RENDERIZADO: MODAL DE ERROR (REEMPLAZA AL ALERT FEO) 🔥
   if (errorMsg) {
     return (
       <div className="fixed inset-0 z-[400] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in">
@@ -223,7 +246,6 @@ export default function ReservaManualModal({ isOpen, onClose, sedes, barberos, c
     );
   }
 
-  // 🔥 RENDERIZADO: MODAL DE ÉXITO 🔥
   if (showSuccess) {
     return (
       <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in">
@@ -238,9 +260,6 @@ export default function ReservaManualModal({ isOpen, onClose, sedes, barberos, c
     );
   }
 
-  const barberosDeSede = barberos.filter((b: any) => b.sede_id?.toString() === sedeId);
-
-  // RENDERIZADO NORMAL: FORMULARIO
   return (
     <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in">
       <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden">

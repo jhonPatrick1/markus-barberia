@@ -91,7 +91,7 @@ export default function AdminDashboard() {
     else if (emailNeto === "sebastian@markus.com") setUserProfile({ tipo: "barbero", refId: 11 }); 
     else if (emailNeto === "andres.magdalena@markus.com") setUserProfile({ tipo: "barbero", refId: 12 }); 
     else if (emailNeto === "luis@markus.com") setUserProfile({ tipo: "barbero", refId: 13 }); 
-    else if (emailNeto === "richard@markus.com") setUserProfile({ tipo: "barbero", refId: 14 }); 
+    else if (emailNeto === "jhonpatrickcg@gmail.com") setUserProfile({ tipo: "barbero", refId: 14 }); 
 
     else setUserProfile({ tipo: "sede", refId: 0 }); 
   };
