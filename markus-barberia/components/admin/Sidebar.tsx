@@ -55,7 +55,7 @@ export default function Sidebar({ activeView, setActiveView, userProfile, onLogo
           </p>
         </div>
 
-        {/* Menú de Navegación */}
+        {/* Menú de Navegación (El flex-1 empuja lo de abajo) */}
         <nav className="flex-1 p-4 space-y-2 mt-4">
           <button
             onClick={() => { 
@@ -87,7 +87,6 @@ export default function Sidebar({ activeView, setActiveView, userProfile, onLogo
             Panel Financiero
           </button>
 
-          {/* 👇 NUEVO BOTÓN: Gestión de Sede 👇 */}
           <button
             onClick={() => { 
               setActiveView('gestion'); 
@@ -102,9 +101,26 @@ export default function Sidebar({ activeView, setActiveView, userProfile, onLogo
             <Users size={18} />
             Gestión de Sede
           </button>
+
+          {/* 🔥 BOTÓN DE CLIENTES MOVIDO ADENTRO DEL NAV 🔥 */}
+          <button 
+            onClick={() => {
+              setActiveView('clientes');
+              setIsOpen(false);
+            }}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-bold transition-all ${
+              activeView === 'clientes' 
+                ? 'bg-white text-black shadow-md' 
+                : 'text-neutral-400 hover:bg-neutral-800 hover:text-white'
+            }`}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+            Base de Clientes
+          </button>
+          
         </nav>
 
-        {/* Botón de Salir abajo */}
+        {/* Botón de Salir abajo (Aquí termina el flex-1 y se pega al fondo) */}
         <div className="p-4 border-t border-neutral-800">
           <button
             onClick={onLogout}

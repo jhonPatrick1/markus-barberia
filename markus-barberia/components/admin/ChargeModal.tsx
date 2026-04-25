@@ -1,24 +1,30 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { CheckCircle2, X, Wallet } from "lucide-react";
+import { CheckCircle2, X, Wallet, Tag } from "lucide-react";
 
 export default function ChargeModal({ cita, onClose, onConfirmarCobro }: any) {
-  // Lógica Matemática de Cobro
-  // Si la BD no tiene monto_total (citas antiguas), asumimos 35 por seguridad.
-  const total = Number(cita.monto_total) || 35; 
+  // Lógica Matemática de Cobro Original
+  const totalOriginal = Number(cita.monto_total) || 35; 
   const adelanto = Number(cita.monto_adelantado) || 0;
   
-  // Lo que realmente debe cobrar hoy el barbero
-  const restanteAproximado = total > adelanto ? (total - adelanto) : 0;
-
-  const [monto, setMonto] = useState<string>(restanteAproximado.toFixed(2)); 
+  // 🔥 NUEVO ESTADO: Descuento
+  const [descuento, setDescuento] = useState<string>("0");
+  const [monto, setMonto] = useState<string>(""); 
   const [metodoPago, setMetodoPago] = useState("Efectivo");
   const [isProcesando, setIsProcesando] = useState(false);
+
+  // 🔥 EFECTO MATEMÁTICO: Calcula el total dinámicamente si cambian el descuento
+  useEffect(() => {
+    const valDescuento = Number(descuento) || 0;
+    const nuevoRestante = Math.max(0, totalOriginal - adelanto - valDescuento);
+    setMonto(nuevoRestante.toFixed(2));
+  }, [descuento, totalOriginal, adelanto]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsProcesando(true);
+    // Mandamos el monto final descontado. AgendaView se encarga del resto.
     await onConfirmarCobro(cita.id, Number(monto), metodoPago);
     setIsProcesando(false);
   };
@@ -39,18 +45,40 @@ export default function ChargeModal({ cita, onClose, onConfirmarCobro }: any) {
           <p className="text-xs text-stone-500 mt-1 uppercase tracking-widest font-medium">Cliente: {cita.cliente_nombre}</p>
         </div>
 
-        {/* ALERTA DE ADELANTO PARA EL BARBERO */}
+        {/* ALERTA DE ADELANTO */}
         {adelanto > 0 && (
-          <div className="bg-emerald-50 border border-emerald-200 p-3 rounded-lg mb-6 flex items-start gap-3">
+          <div className="bg-emerald-50 border border-emerald-200 p-3 rounded-lg mb-4 flex items-start gap-3">
             <Wallet className="text-emerald-600 shrink-0 mt-0.5" size={18} />
             <div className="text-left">
               <p className="text-emerald-800 text-xs font-bold uppercase tracking-widest">¡Pagó Adelanto!</p>
-              <p className="text-emerald-600 text-xs font-medium mt-0.5">El cliente ya dejó S/ {adelanto.toFixed(2)} por Yape. Solo cóbrale la diferencia.</p>
+              <p className="text-emerald-600 text-xs font-medium mt-0.5">El cliente ya dejó S/ {adelanto.toFixed(2)} por Yape.</p>
             </div>
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          
+          {/* 🔥 NUEVO: SECCIÓN DE DESCUENTO 🔥 */}
+          <div>
+            <label htmlFor="input-descuento" className="flex items-center gap-1.5 text-xs font-bold text-red-500 uppercase mb-1 tracking-wider">
+              <Tag size={14} /> Aplicar Descuento / Cortesía (S/)
+            </label>
+            <input 
+              id="input-descuento"
+              type="number" step="0.10" min="0"
+              value={descuento} onChange={e => setDescuento(e.target.value)}
+              className="w-full border-2 border-red-100 rounded-lg p-2.5 text-center text-red-600 font-bold outline-none focus:border-red-400 transition-colors bg-red-50/50"
+              placeholder="0.00"
+            />
+          </div>
+
+          {/* RECIBO VISUAL DESGLOSADO */}
+          <div className="bg-stone-50 border border-stone-200 rounded-lg p-3 text-xs font-medium text-stone-600 space-y-1.5">
+            <div className="flex justify-between"><span>Total Base:</span> <span>S/ {totalOriginal.toFixed(2)}</span></div>
+            {adelanto > 0 && <div className="flex justify-between text-emerald-600"><span>Adelanto (-):</span> <span>S/ {adelanto.toFixed(2)}</span></div>}
+            {(Number(descuento) || 0) > 0 && <div className="flex justify-between text-red-500"><span>Descuento (-):</span> <span>S/ {Number(descuento).toFixed(2)}</span></div>}
+          </div>
+
           <div>
             <label htmlFor="input-monto" className="block text-xs font-bold text-stone-500 uppercase mb-1 tracking-wider">Monto a cobrar AHORA (S/)</label>
             <input 

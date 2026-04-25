@@ -3,15 +3,15 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabase";
 
-export default function ReservaManualModal({ isOpen, onClose, sedes, barberos, cargarDatos, userProfile }: any) {
+export default function ReservaManualModal({ isOpen, onClose, sedes = [], barberos = [], cargarDatos, userProfile }: any) {
   const [serviciosDB, setServiciosDB] = useState<any[]>([]);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [clientesDB, setClientesDB] = useState<any[]>([]);
+  const [showDropdown, setShowDropdown] = useState(false);
   
-  // Estados de Interfaz Premium
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [errorMsg, setErrorMsg] = useState(""); 
 
-  // Estados del Formulario
   const [sedeId, setSedeId] = useState("");
   const [barberoId, setBarberoId] = useState("");
   const [fecha, setFecha] = useState("");
@@ -34,36 +34,50 @@ export default function ReservaManualModal({ isOpen, onClose, sedes, barberos, c
       setFecha(getTodayString()); 
       
       if (userProfile?.tipo === "sede") {
-        setSedeId(userProfile.refId.toString());
+        setSedeId(userProfile.refId?.toString());
       }
 
       const fetchServicios = async () => {
-        const { data } = await supabase.from('servicios').select('*').order('id', { ascending: true });
-        if (data) setServiciosDB(data);
+        try {
+          const { data } = await supabase.from('servicios').select('*').order('id', { ascending: true });
+          if (data) setServiciosDB(data);
+        } catch (e) { console.error("Error cargando servicios", e); }
       };
+      
+      const fetchClientes = async () => {
+        try {
+          const { data } = await supabase.from('clientes').select('*').order('nombre', { ascending: true });
+          if (data) setClientesDB(data);
+        } catch (e) { console.error("Error cargando clientes", e); }
+      };
+
       fetchServicios();
+      fetchClientes();
     } else {
       setSedeId(""); setBarberoId(""); setFecha(""); setHora(""); 
       setClienteNombre(""); setClienteCelular(""); setServiciosSeleccionados([]);
       setCitasDelBarbero([]);
       setShowSuccess(false);
       setErrorMsg("");
+      setShowDropdown(false);
     }
   }, [isOpen, userProfile]);
 
   useEffect(() => {
     const fetchCitasBarbero = async () => {
       if (barberoId && fecha) {
-        const { data } = await supabase
-          .from('citas')
-          .select('fecha_hora, duracion_total_minutos')
-          .eq('barbero_id', barberoId)
-          .neq('estado', 'cancelada');
-        
-        if (data) {
-          const citasDelDia = data.filter(c => c.fecha_hora.startsWith(fecha));
-          setCitasDelBarbero(citasDelDia);
-        }
+        try {
+          const { data } = await supabase
+            .from('citas')
+            .select('fecha_hora, duracion_total_minutos')
+            .eq('barbero_id', barberoId)
+            .neq('estado', 'cancelada');
+          
+          if (data) {
+            const citasDelDia = data.filter(c => c.fecha_hora && c.fecha_hora.startsWith(fecha));
+            setCitasDelBarbero(citasDelDia);
+          }
+        } catch (e) { console.error("Error cargando agenda del barbero", e); }
       } else {
         setCitasDelBarbero([]);
       }
@@ -85,6 +99,7 @@ export default function ReservaManualModal({ isOpen, onClose, sedes, barberos, c
 
         let estaOcupado = false;
         citasDelBarbero.forEach(cita => {
+          if(!cita.fecha_hora) return;
           const citaDate = new Date(cita.fecha_hora);
           const inicioCitaMin = citaDate.getHours() * 60 + citaDate.getMinutes();
           const finCitaMin = inicioCitaMin + (cita.duracion_total_minutos || 30);
@@ -113,7 +128,8 @@ export default function ReservaManualModal({ isOpen, onClose, sedes, barberos, c
     );
   };
 
-  const barberosDeSede = barberos.filter((b: any) => b.sede_id?.toString() === sedeId);
+  // 🔥 BLINDAJE: Evita crash si barberos es undefined
+  const barberosDeSede = Array.isArray(barberos) ? barberos.filter((b: any) => b?.sede_id?.toString() === sedeId) : [];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -129,8 +145,8 @@ export default function ReservaManualModal({ isOpen, onClose, sedes, barberos, c
       serviciosSeleccionados.forEach(id => {
         const srv = serviciosDB.find(s => s.id === id);
         if (srv) {
-          montoTotal += Number(srv.precio);
-          duracionTotal += Number(srv.duracion_minutos);
+          montoTotal += Number(srv.precio || 0);
+          duracionTotal += Number(srv.duracion_minutos || 0);
         }
       });
 
@@ -141,6 +157,7 @@ export default function ReservaManualModal({ isOpen, onClose, sedes, barberos, c
       const finMinNuevo = inicioMinNuevo + duracionTotal;
 
       const hayChoque = citasDelBarbero.some(cita => {
+        if(!cita.fecha_hora) return false;
         const citaDate = new Date(cita.fecha_hora);
         const inicioExistente = citaDate.getHours() * 60 + citaDate.getMinutes();
         const finExistente = inicioExistente + (cita.duracion_total_minutos || 30);
@@ -153,12 +170,25 @@ export default function ReservaManualModal({ isOpen, onClose, sedes, barberos, c
         return;
       }
 
-      // Guardar cita
+      // CRM Logic
+      const nombreLimpio = clienteNombre.trim();
+      const clienteExiste = clientesDB.find(c => c?.nombre?.toLowerCase() === nombreLimpio.toLowerCase());
+      
+      if (!clienteExiste) {
+        await supabase.from('clientes').insert({
+          nombre: nombreLimpio,
+          celular: clienteCelular || "",
+          correo: "whatsapp@manual.com"
+        });
+      } else if (clienteExiste.celular !== clienteCelular) {
+        await supabase.from('clientes').update({ celular: clienteCelular }).eq('id', clienteExiste.id);
+      }
+
       const { data: nuevaCita, error: errorCita } = await supabase.from('citas').insert({
         sede_id: Number(sedeId),
         barbero_id: Number(barberoId),
         fecha_hora: isoDateString,
-        cliente_nombre: clienteNombre,
+        cliente_nombre: nombreLimpio,
         cliente_apellido: "", 
         cliente_celular: clienteCelular || "000000000",
         cliente_correo: "whatsapp@manual.com",
@@ -182,25 +212,20 @@ export default function ReservaManualModal({ isOpen, onClose, sedes, barberos, c
       const { error: errorSrv } = await supabase.from('cita_servicios').insert(relaciones);
       if (errorSrv) throw errorSrv;
 
-      // =========================================================
-      // 🔥 NUEVO: DISPARAR EL CORREO A TRAVÉS DE RESEND 🔥
-      // =========================================================
       try {
-        // 1. Extraemos los nombres legibles de barbero y servicios para la plantilla
         const barberoSeleccionado = barberosDeSede.find((b: any) => b.id.toString() === barberoId);
         const nombresServicios = serviciosSeleccionados
           .map(id => serviciosDB.find(s => s.id === id)?.nombre)
           .filter(Boolean)
           .join(', ');
 
-        // 2. Hacemos el llamado a tu API (Asegúrate de que la ruta sea correcta, asumo que es '/api/send')
         await fetch('/api/send-email', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             barberoId: barberoId,
             barberoNombre: barberoSeleccionado?.nombre || 'Especialista',
-            clienteNombre: `${clienteNombre} (Vía WhatsApp)`, // Agregamos "(Vía WhatsApp)" para que el barbero lo identifique
+            clienteNombre: `${nombreLimpio} (Vía WhatsApp)`, 
             fecha: fecha,
             hora: hora,
             servicios: nombresServicios,
@@ -208,10 +233,8 @@ export default function ReservaManualModal({ isOpen, onClose, sedes, barberos, c
           })
         });
       } catch (emailError) {
-        // Fallo silencioso: Si el correo falla, la cita igual está guardada. No rompemos la UI.
-        console.error("Error silencioso: La cita se guardó pero el correo falló.", emailError);
+        console.error("Error enviando email:", emailError);
       }
-      // =========================================================
 
       cargarDatos(); 
       setShowSuccess(true); 
@@ -281,7 +304,7 @@ export default function ReservaManualModal({ isOpen, onClose, sedes, barberos, c
               <label className="block text-[10px] font-bold text-stone-500 uppercase tracking-widest mb-1.5">Sede</label>
               <select aria-label="Seleccionar Sede" disabled={userProfile?.tipo === "sede"} required value={sedeId} onChange={e => { setSedeId(e.target.value); setBarberoId(""); setHora(""); }} className="w-full border-2 border-stone-200 rounded-lg p-3 outline-none focus:border-[#25D366] text-sm font-medium bg-white disabled:bg-stone-100 disabled:text-stone-500">
                 <option value="" disabled>Seleccione sede...</option>
-                {sedes.map((s: any) => <option key={s.id} value={s.id}>{s.nombre}</option>)}
+                {sedes?.map((s: any) => <option key={s.id} value={s.id}>{s.nombre}</option>)}
               </select>
             </div>
             <div>
@@ -308,10 +331,50 @@ export default function ReservaManualModal({ isOpen, onClose, sedes, barberos, c
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
+            
+            {/* 🔥 CRM BLINDADO 🔥 */}
+            <div className="relative">
               <label className="block text-[10px] font-bold text-stone-500 uppercase tracking-widest mb-1.5">Nombre del Cliente</label>
-              <input aria-label="Nombre del Cliente" type="text" required value={clienteNombre} onChange={e => setClienteNombre(e.target.value)} placeholder="Ej. Juan Pérez" className="w-full border-2 border-stone-200 rounded-lg p-3 outline-none focus:border-[#25D366] text-sm" />
+              <input 
+                aria-label="Nombre del Cliente" 
+                type="text" 
+                required 
+                value={clienteNombre} 
+                onChange={e => {
+                  setClienteNombre(e.target.value);
+                  setShowDropdown(true);
+                }} 
+                onFocus={() => setShowDropdown(true)}
+                onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
+                placeholder="Buscar o crear nuevo..." 
+                className="w-full border-2 border-stone-200 rounded-lg p-3 outline-none focus:border-[#25D366] text-sm" 
+              />
+              
+              {showDropdown && clienteNombre && (
+                <ul className="absolute z-10 w-full bg-white border border-stone-200 rounded-lg shadow-xl max-h-40 overflow-y-auto mt-1 custom-scrollbar">
+                  {clientesDB
+                    .filter(c => c?.nombre?.toLowerCase().includes(clienteNombre.toLowerCase()))
+                    .map(c => (
+                      <li 
+                        key={c.id} 
+                        className="p-3 hover:bg-[#25D366]/10 hover:text-[#1EBE5D] cursor-pointer text-sm font-medium text-stone-700 border-b border-stone-100 last:border-0 transition-colors flex items-center justify-between"
+                        onClick={() => {
+                          setClienteNombre(c.nombre);
+                          if(c.celular) setClienteCelular(c.celular);
+                          setShowDropdown(false);
+                        }}
+                      >
+                        <span>{c.nombre}</span>
+                        <span className="text-[10px] text-stone-400 font-bold tracking-widest">{c.celular}</span>
+                      </li>
+                  ))}
+                  {clientesDB.filter(c => c?.nombre?.toLowerCase().includes(clienteNombre.toLowerCase())).length === 0 && (
+                     <li className="p-3 text-xs text-stone-400 italic">Cliente nuevo. Se guardará automáticamente.</li>
+                  )}
+                </ul>
+              )}
             </div>
+
             <div>
               <label className="block text-[10px] font-bold text-stone-500 uppercase tracking-widest mb-1.5">WhatsApp / Celular</label>
               <input aria-label="Celular del Cliente" type="tel" required value={clienteCelular} onChange={e => setClienteCelular(e.target.value)} placeholder="Ej. 987654321" className="w-full border-2 border-stone-200 rounded-lg p-3 outline-none focus:border-[#25D366] text-sm" />

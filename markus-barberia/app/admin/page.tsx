@@ -6,6 +6,7 @@ import Sidebar from "../../components/admin/Sidebar";
 import AgendaView from "../../components/admin/AgendaView";
 import FinanceView from "../../components/admin/FinanceView";
 import GestionSede from "../../components/admin/GestionSede";
+import CRMView from "../../components/admin/CRMView";
 export const dynamic = 'force-dynamic';
 
 type UserProfile = { tipo: "master" | "sede" | "barbero", refId: string | number };
@@ -16,7 +17,7 @@ export default function AdminDashboard() {
   const [email, setEmail] = useState(""); 
   const [password, setPassword] = useState("");
   const [errorLogin, setErrorLogin] = useState("");
-  const [activeView, setActiveView] = useState<'agenda' | 'finanzas' | 'gestion'>('agenda');
+  const [activeView, setActiveView] = useState<'agenda' | 'finanzas' | 'gestion' | 'clientes'>('agenda');
   
   // Estados de carga blindados
   const [isCheckingSession, setIsCheckingSession] = useState(true); 
@@ -252,6 +253,8 @@ export default function AdminDashboard() {
             sedes={sedes}
             userProfile={userProfile}
           />
+        ) : activeView === 'clientes' ? (
+           <CRMView />
         ) : (
           <GestionSede 
             barberos={listaBarberos} 
