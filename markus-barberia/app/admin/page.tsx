@@ -80,6 +80,7 @@ export default function AdminDashboard() {
     else if (emailNeto === "Hanziel69barber@gmail.com") setUserProfile({ tipo: "barbero", refId: 3 }); 
     else if (emailNeto === "marcos101288@gmail.com") setUserProfile({ tipo: "barbero", refId: 4 }); 
     else if (emailNeto === "murayarihuaicamae@gmail.com") setUserProfile({ tipo: "barbero", refId: 15 });
+    else if (emailNeto === "Yostinquispecamara3@gmail.com") setUserProfile({ tipo: "barbero", refId: 16 });
     // Barberos - Cercado de Lima (Sede 2)
     else if (emailNeto === "Irigoinjerson@gmail.com") setUserProfile({ tipo: "barbero", refId: 5 }); 
     else if (emailNeto === "manuel@markus.com") setUserProfile({ tipo: "barbero", refId: 6 }); 
