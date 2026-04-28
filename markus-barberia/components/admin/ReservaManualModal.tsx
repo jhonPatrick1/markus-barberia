@@ -171,17 +171,35 @@ export default function ReservaManualModal({ isOpen, onClose, sedes = [], barber
       }
 
       // CRM Logic
+      // =========================================================
+      // 🔥 LÓGICA CRM (UPSERT INTELIGENTE Y VISITAS) 🔥
+      // =========================================================
       const nombreLimpio = clienteNombre.trim();
       const clienteExiste = clientesDB.find(c => c?.nombre?.toLowerCase() === nombreLimpio.toLowerCase());
       
-      if (!clienteExiste) {
-        await supabase.from('clientes').insert({
-          nombre: nombreLimpio,
-          celular: clienteCelular || "",
-          correo: "whatsapp@manual.com"
-        });
-      } else if (clienteExiste.celular !== clienteCelular) {
-        await supabase.from('clientes').update({ celular: clienteCelular }).eq('id', clienteExiste.id);
+      try {
+        if (clienteExiste) {
+          // SI EXISTE: Le sumamos 1 visita a su contador y actualizamos celular si lo cambió
+          await supabase
+            .from('clientes')
+            .update({ 
+              cantidad_citas: (clienteExiste.cantidad_citas || 0) + 1,
+              celular: clienteCelular || clienteExiste.celular 
+            })
+            .eq('id', clienteExiste.id);
+        } else {
+          // SI ES NUEVO: Lo creamos y le ponemos su 1ra visita automáticamente
+          await supabase
+            .from('clientes')
+            .insert({
+              nombre: nombreLimpio,
+              celular: clienteCelular || "",
+              correo: "whatsapp@manual.com",
+              cantidad_citas: 1
+            });
+        }
+      } catch (crmError) {
+        console.error("Error al actualizar visitas en CRM:", crmError);
       }
 
       const { data: nuevaCita, error: errorCita } = await supabase.from('citas').insert({
@@ -341,8 +359,14 @@ export default function ReservaManualModal({ isOpen, onClose, sedes = [], barber
                 required 
                 value={clienteNombre} 
                 onChange={e => {
-                  setClienteNombre(e.target.value);
+                  const nuevoNombre = e.target.value;
+                  setClienteNombre(nuevoNombre);
                   setShowDropdown(true);
+                  
+                  // 🔥 LA MAGIA: Si el input del nombre se queda vacío, limpiamos el celular
+                  if (nuevoNombre.trim() === "") {
+                    setClienteCelular("");
+                  }
                 }} 
                 onFocus={() => setShowDropdown(true)}
                 onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
